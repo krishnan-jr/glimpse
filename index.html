@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Glimpse of Today - WhatsApp Message Generator</title>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Favicon: Kite Emoji -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪁</text></svg>">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-icon">🪁</span>
+        <div class="brand-text">
+          <h1>Glimpse of Today</h1>
+          <span class="subtitle">WhatsApp Template Generator</span>
+        </div>
+      </div>
+      <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
+        <span id="themeIcon">🌙</span>
+      </button>
+    </header>
+
+    <!-- Global Controls: Date, Class/Div & Title Emoji -->
+    <section class="meta-bar">
+      <div class="meta-field">
+        <label for="glimpseDate"><span class="label-icon">📆</span> Date</label>
+        <input type="date" id="glimpseDate" class="input-control">
+      </div>
+      <div class="meta-field">
+        <label for="classDiv"><span class="label-icon">👩🏻‍🏫</span> Class & Div</label>
+        <input type="text" id="classDiv" class="input-control" placeholder="e.g. 2A" value="">
+      </div>
+      <div class="meta-field full-width">
+        <div class="field-label-row">
+          <label for="headerEmoji"><span class="label-icon">✨</span> Title Emoji / Banner (Free Text)</label>
+          <button id="randomEmojiBtn" class="btn-text-sm" type="button">🎲 Pick Random</button>
+        </div>
+        <input type="text" id="headerEmoji" class="input-control" placeholder="Type custom emoji or text (Auto-picks random on refresh)">
+      </div>
+    </section>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="tab-btn active" data-tab="tab-entry" role="tab" aria-selected="true">
+        <span class="tab-icon">📝</span>
+        <span class="tab-label">Daily Entry</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-subjects" role="tab" aria-selected="false">
+        <span class="tab-icon">📚</span>
+        <span class="tab-label">Subjects</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-timetable" role="tab" aria-selected="false">
+        <span class="tab-icon">📅</span>
+        <span class="tab-label">Timetable</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-preview" role="tab" aria-selected="false">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">Preview & Share</span>
+        <span class="badge" id="activeCountBadge">0</span>
+      </button>
+    </nav>
+
+    <!-- Tab Contents Container -->
+    <main class="content-area">
+
+      <!-- TAB 1: DAILY ENTRY -->
+      <section id="tab-entry" class="tab-pane active">
+        <div class="pane-header">
+          <div class="pane-info">
+            <h2 id="todayFormattedDate">📆 1️⃣5️⃣0️⃣7️⃣2️⃣0️⃣2️⃣6️⃣</h2>
+            <p id="todayFormattedDay" class="day-tag">🪂 Wednesday</p>
+          </div>
+          <div class="pane-actions">
+            <button id="reapplyTimetableBtn" class="btn btn-subtle btn-sm" title="Auto-select subjects matching timetable">📅 Auto-Select Day</button>
+            <button id="clearNotesBtn" class="btn btn-subtle btn-sm">Clear Notes</button>
+          </div>
+        </div>
+
+        <div id="subjectEntryList" class="subject-entry-list">
+          <!-- Dynamically populated subject entry cards -->
+        </div>
+      </section>
+
+      <!-- TAB 2: MANAGE SUBJECTS -->
+      <section id="tab-subjects" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h2>Manage Subjects</h2>
+            <p class="pane-desc">Customize subjects, colors, emojis, and reorder as needed.</p>
+          </div>
+          <button id="addSubjectBtn" class="btn btn-primary btn-sm">+ Add Subject</button>
+        </div>
+
+        <div id="subjectsManagerList" class="subjects-manager-list">
+          <!-- Dynamically populated subject manager cards -->
+        </div>
+
+        <div class="reset-area">
+          <button id="resetDefaultsBtn" class="btn btn-outline-danger btn-sm">Reset to Default Subjects</button>
+        </div>
+      </section>
+
+      <!-- TAB 3: WEEKLY TIMETABLE -->
+      <section id="tab-timetable" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h2>Weekly Timetable</h2>
+            <p class="pane-desc">Configure subjects taught on each day. Selected date auto-enables these subjects.</p>
+          </div>
+          <button id="resetTimetableBtn" class="btn btn-subtle btn-sm">Reset Timetable</button>
+        </div>
+
+        <div class="day-selector-pills" id="daySelectorPills">
+          <button class="day-pill active" data-day="Monday">Mon</button>
+          <button class="day-pill" data-day="Tuesday">Tue</button>
+          <button class="day-pill" data-day="Wednesday">Wed</button>
+          <button class="day-pill" data-day="Thursday">Thu</button>
+          <button class="day-pill" data-day="Friday">Fri</button>
+          <button class="day-pill" data-day="Saturday">Sat</button>
+          <button class="day-pill" data-day="Sunday">Sun</button>
+        </div>
+
+        <div class="timetable-day-editor">
+          <div class="day-editor-header">
+            <h3 id="currentEditorDayTitle">📅 Monday Schedule (8 Periods)</h3>
+            <span class="day-subject-count" id="daySubjectCount">8 Period Slots</span>
+          </div>
+          <div id="timetablePeriodSlots" class="timetable-slots-list">
+            <!-- Dynamically rendered 8 period slot dropdown selectors for selected day -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: PREVIEW & EXPORT -->
+      <section id="tab-preview" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h2>WhatsApp Message</h2>
+            <p class="pane-desc">Live preview formatted for WhatsApp sharing.</p>
+          </div>
+          <div class="preview-actions-top">
+            <button id="copyMessageBtn" class="btn btn-whatsapp">
+              <span class="btn-icon">📋</span> Copy Message
+            </button>
+          </div>
+        </div>
+
+        <!-- WhatsApp Phone Frame Simulation -->
+        <div class="whatsapp-preview-card">
+          <div class="wa-chat-header">
+            <div class="wa-avatar">🏫</div>
+            <div class="wa-chat-info">
+              <div class="wa-chat-title">Class Updates</div>
+              <div class="wa-chat-status">online</div>
+            </div>
+          </div>
+          <div class="wa-bubble-container">
+            <div class="wa-bubble">
+              <pre id="whatsappOutputText" class="wa-text-content"></pre>
+              <div class="wa-time-stamp" id="waTimeStamp">12:00 PM ✓✓</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons-group">
+          <button id="copyMessageBtn2" class="btn btn-whatsapp btn-lg">
+            <span class="btn-icon">📋</span> Copy WhatsApp Message
+          </button>
+          <button id="shareWhatsAppBtn" class="btn btn-secondary btn-lg">
+            <span class="btn-icon">💬</span> Direct Share via WhatsApp
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Modal for Adding / Editing Subject -->
+    <div id="subjectModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-content glass-card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Add Subject</h3>
+          <button id="closeModalBtn" class="close-btn">&times;</button>
+        </div>
+        <form id="subjectForm" class="modal-form">
+          <input type="hidden" id="editSubjectId">
+          
+          <div class="form-group">
+            <label for="subName">Subject Name *</label>
+            <input type="text" id="subName" class="input-control" placeholder="e.g. English" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="subEmoji">Subject Emoji *</label>
+              <input type="text" id="subEmoji" class="input-control emoji-input" placeholder="e.g. 🔤" value="🔤" required>
+            </div>
+            <div class="form-group">
+              <label for="subBadge">Color Square *</label>
+              <select id="subBadge" class="input-control badge-select">
+                <optgroup label="Square Colors">
+                  <option value="🟥">🟥 Red Square</option>
+                  <option value="🟧">🟧 Orange Square</option>
+                  <option value="🟨">🟨 Yellow Square</option>
+                  <option value="🟩">🟩 Green Square</option>
+                  <option value="🩵">🩵 Light Blue Square</option>
+                  <option value="🟦">🟦 Blue Square</option>
+                  <option value="🟪">🟪 Purple Square</option>
+                  <option value="🟫">🟫 Brown Square</option>
+                  <option value="⬛">⬛ Black Square</option>
+                  <option value="⬜">⬜ White Square</option>
+                  <option value="💖">💖 Pink Badge</option>
+                  <option value="🩷">🩷 Light Pink Heart</option>
+                </optgroup>
+                <optgroup label="Circle Colors">
+                  <option value="🔴">🔴 Red Circle</option>
+                  <option value="🟠">🟠 Orange Circle</option>
+                  <option value="🟡">🟡 Yellow Circle</option>
+                  <option value="🟢">🟢 Green Circle</option>
+                  <option value="🔵">🔵 Blue Circle</option>
+                  <option value="🟣">🟣 Purple Circle</option>
+                  <option value="🟤">🟤 Brown Circle</option>
+                  <option value="🖤">🖤 Black Circle</option>
+                  <option value="⚪">⚪ White Circle</option>
+                </optgroup>
+                <optgroup label="Diamond & Shape Colors">
+                  <option value="🔶">🔶 Large Orange Diamond</option>
+                  <option value="🔷">🔷 Large Blue Diamond</option>
+                  <option value="🔸">🔸 Small Orange Diamond</option>
+                  <option value="🔹">🔹 Small Blue Diamond</option>
+                  <option value="💠">💠 Diamond with Dot</option>
+                  <option value="🔻">🔻 Red Triangle Down</option>
+                  <option value="🔺">🔺 Red Triangle Up</option>
+                  <option value="⭐">⭐ Gold Star</option>
+                  <option value="✨">✨ Sparkle Badge</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="subSuffix">Suffix / CW Tag (Optional)</label>
+            <input type="text" id="subSuffix" class="input-control" placeholder="e.g. C. W.">
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" id="cancelModalBtn" class="btn btn-subtle">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Subject</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification">
+      <span id="toastIcon">✅</span>
+      <span id="toastMessage">Copied to clipboard!</span>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
