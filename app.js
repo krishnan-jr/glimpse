@@ -191,6 +191,51 @@
     }
   }
 
+  // --- PWA SERVICE WORKER & INSTALL PROMPT ---
+  let deferredInstallPrompt = null;
+  const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+
+  function setupPWA() {
+    // 1. Register Service Worker for Offline Mode
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then((registration) => {
+          console.log('ServiceWorker registered successfully with scope:', registration.scope);
+        }).catch((error) => {
+          console.warn('ServiceWorker registration failed:', error);
+        });
+      });
+    }
+
+    // 2. Listen for Browser PWA Install Prompt Event
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (pwaInstallBtn) {
+        pwaInstallBtn.style.display = 'inline-flex';
+      }
+    });
+
+    if (pwaInstallBtn) {
+      pwaInstallBtn.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        const choiceResult = await deferredInstallPrompt.userChoice;
+        if (choiceResult && choiceResult.outcome === 'accepted') {
+          showToast('App installed successfully! 📲');
+        }
+        deferredInstallPrompt = null;
+        pwaInstallBtn.style.display = 'none';
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      console.log('Glimpse App installed!');
+      if (pwaInstallBtn) pwaInstallBtn.style.display = 'none';
+      deferredInstallPrompt = null;
+    });
+  }
+
   // Initialize App
   function init() {
     const isSecretPresetTriggered = checkUrlForSecretPreset();
@@ -202,6 +247,7 @@
     setupDatePicker();
     setupTheme();
     setupTabNavigation();
+    setupPWA();
     setupEventListeners();
     
     // Apply timetable for selected date
