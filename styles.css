@@ -1179,6 +1179,26 @@ input:checked + .slider:before {
   margin-bottom: var(--space-4);
 }
 
+/* App Footer */
+.app-footer {
+  text-align: center;
+  padding: var(--space-4) var(--space-5);
+  margin-top: auto;
+}
+
+.app-footer p {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--surface);
+  padding: 6px var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-soft);
+}
+
 /* Responsive Layout */
 @media (min-width: 640px) {
   body {
