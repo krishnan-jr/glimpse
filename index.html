@@ -5,21 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Glimpse of Today - WhatsApp Message Generator</title>
   
-  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- PWA Manifest & Meta Tags -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#059669">
+  <meta name="theme-color" content="#e60023">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Glimpse">
   <link rel="apple-touch-icon" href="icon-192.png">
   
-  <!-- Favicon: Kite Emoji -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪁</text></svg>">
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23e60023%22><path d=%22M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z%22/></svg>">
   
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -37,10 +37,12 @@
       </div>
       <div class="header-actions">
         <button id="pwaInstallBtn" class="btn-install-app" style="display: none;" title="Install App to Home Screen">
-          <span class="btn-icon">📲</span> Install App
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Install
         </button>
         <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
-          <span id="themeIcon">🌙</span>
+          <span id="themeIcon">
+            <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
+          </span>
         </button>
       </div>
     </header>
@@ -48,38 +50,34 @@
     <!-- Global Controls: Date, Class/Div & Title Emoji -->
     <section class="meta-bar">
       <div class="meta-field">
-        <label for="glimpseDate"><span class="label-icon">📆</span> Date</label>
+        <label for="glimpseDate">Date</label>
         <input type="date" id="glimpseDate" class="input-control">
       </div>
       <div class="meta-field">
-        <label for="classDiv"><span class="label-icon">👩🏻‍🏫</span> Class & Div</label>
+        <label for="classDiv">Class & Div</label>
         <input type="text" id="classDiv" class="input-control" placeholder="e.g. 2A" value="">
       </div>
       <div class="meta-field full-width">
         <div class="field-label-row">
-          <label for="headerEmoji"><span class="label-icon">✨</span> Title Emoji / Banner (Free Text)</label>
-          <button id="randomEmojiBtn" class="btn-text-sm" type="button">🎲 Pick Random</button>
+          <label for="headerEmoji">Title Emoji / Banner (Content)</label>
+          <button id="randomEmojiBtn" class="btn-text-sm" type="button">Pick Random</button>
         </div>
-        <input type="text" id="headerEmoji" class="input-control" placeholder="Type custom emoji or text (Auto-picks random on refresh)">
+        <input type="text" id="headerEmoji" class="input-control" placeholder="Type custom emoji or banner text (Auto-picks random on refresh)">
       </div>
     </section>
 
     <!-- Main Navigation Tabs -->
     <nav class="nav-tabs" role="tablist">
       <button class="tab-btn active" data-tab="tab-entry" role="tab" aria-selected="true">
-        <span class="tab-icon">📝</span>
         <span class="tab-label">Daily Entry</span>
       </button>
       <button class="tab-btn" data-tab="tab-subjects" role="tab" aria-selected="false">
-        <span class="tab-icon">📚</span>
         <span class="tab-label">Subjects</span>
       </button>
       <button class="tab-btn" data-tab="tab-timetable" role="tab" aria-selected="false">
-        <span class="tab-icon">📅</span>
         <span class="tab-label">Timetable</span>
       </button>
       <button class="tab-btn" data-tab="tab-preview" role="tab" aria-selected="false">
-        <span class="tab-icon">📋</span>
         <span class="tab-label">Preview & Share</span>
         <span class="badge" id="activeCountBadge">0</span>
       </button>
@@ -92,11 +90,11 @@
       <section id="tab-entry" class="tab-pane active">
         <div class="pane-header">
           <div class="pane-info">
-            <h2 id="todayFormattedDate">📆 1️⃣5️⃣0️⃣7️⃣2️⃣0️⃣2️⃣6️⃣</h2>
-            <p id="todayFormattedDay" class="day-tag">🪂 Wednesday</p>
+            <h2 id="todayFormattedDate">15 / 07 / 2026</h2>
+            <p id="todayFormattedDay" class="day-tag">Wednesday</p>
           </div>
           <div class="pane-actions">
-            <button id="reapplyTimetableBtn" class="btn btn-subtle btn-sm" title="Auto-select subjects matching timetable">📅 Auto-Select Day</button>
+            <button id="reapplyTimetableBtn" class="btn btn-subtle btn-sm" title="Auto-select subjects matching timetable">Auto-Select Day</button>
             <button id="clearNotesBtn" class="btn btn-subtle btn-sm">Clear Notes</button>
           </div>
         </div>
@@ -147,7 +145,7 @@
 
         <div class="timetable-day-editor">
           <div class="day-editor-header">
-            <h3 id="currentEditorDayTitle">📅 Monday Schedule (8 Periods)</h3>
+            <h3 id="currentEditorDayTitle">Monday Schedule (8 Periods)</h3>
             <span class="day-subject-count" id="daySubjectCount">8 Period Slots</span>
           </div>
           <div id="timetablePeriodSlots" class="timetable-slots-list">
@@ -156,7 +154,7 @@
         </div>
       </section>
 
-      <!-- TAB 3: PREVIEW & EXPORT -->
+      <!-- TAB 4: PREVIEW & EXPORT -->
       <section id="tab-preview" class="tab-pane">
         <div class="pane-header">
           <div>
@@ -164,16 +162,16 @@
             <p class="pane-desc">Live preview formatted for WhatsApp sharing.</p>
           </div>
           <div class="preview-actions-top">
-            <button id="copyMessageBtn" class="btn btn-whatsapp">
-              <span class="btn-icon">📋</span> Copy Message
-            </button>
+            <button id="copyMessageBtn" class="btn btn-whatsapp">Copy Message</button>
           </div>
         </div>
 
         <!-- WhatsApp Phone Frame Simulation -->
         <div class="whatsapp-preview-card">
           <div class="wa-chat-header">
-            <div class="wa-avatar">🏫</div>
+            <div class="wa-avatar">
+              <svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+            </div>
             <div class="wa-chat-info">
               <div class="wa-chat-title">Class Updates</div>
               <div class="wa-chat-status">online</div>
@@ -188,12 +186,8 @@
         </div>
 
         <div class="action-buttons-group">
-          <button id="copyMessageBtn2" class="btn btn-whatsapp btn-lg">
-            <span class="btn-icon">📋</span> Copy WhatsApp Message
-          </button>
-          <button id="shareWhatsAppBtn" class="btn btn-secondary btn-lg">
-            <span class="btn-icon">💬</span> Direct Share via WhatsApp
-          </button>
+          <button id="copyMessageBtn2" class="btn btn-whatsapp btn-lg">Copy WhatsApp Message</button>
+          <button id="shareWhatsAppBtn" class="btn btn-secondary btn-lg">Direct Share via WhatsApp</button>
         </div>
       </section>
 
@@ -201,10 +195,10 @@
 
     <!-- Modal for Adding / Editing Subject -->
     <div id="subjectModal" class="modal-overlay" aria-hidden="true">
-      <div class="modal-content glass-card">
+      <div class="modal-content">
         <div class="modal-header">
           <h3 id="modalTitle">Add Subject</h3>
-          <button id="closeModalBtn" class="close-btn">&times;</button>
+          <button id="closeModalBtn" class="close-btn" aria-label="Close">&times;</button>
         </div>
         <form id="subjectForm" class="modal-form">
           <input type="hidden" id="editSubjectId">
@@ -216,11 +210,11 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="subEmoji">Subject Emoji *</label>
+              <label for="subEmoji">Subject Emoji (Content) *</label>
               <input type="text" id="subEmoji" class="input-control emoji-input" placeholder="e.g. 🔤" value="🔤" required>
             </div>
             <div class="form-group">
-              <label for="subBadge">Color Square *</label>
+              <label for="subBadge">Color Square (Content) *</label>
               <select id="subBadge" class="input-control badge-select">
                 <optgroup label="Square Colors">
                   <option value="🟥">🟥 Red Square</option>
@@ -277,7 +271,6 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="toast-notification">
-      <span id="toastIcon">✅</span>
       <span id="toastMessage">Copied to clipboard!</span>
     </div>
 

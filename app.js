@@ -74,7 +74,7 @@
   let selectedDate = new Date();
   let selectedEditorDay = 'Monday';
   let classAndDiv = '2G';
-  let isDarkMode = false;
+  let isDarkMode = true;
 
   const RANDOM_HEADER_EMOJIS_100 = [
     '🪁', '🪂', '✨', '🌟', '🎨', '🚀', '📌', '🎈', '🌺', '🎯',
@@ -294,7 +294,7 @@
       }
 
       const savedTheme = localStorage.getItem('glimpse_theme');
-      isDarkMode = savedTheme === 'dark';
+      isDarkMode = savedTheme !== 'light';
     } catch (e) {
       console.error('Error loading storage:', e);
       subjects = JSON.parse(JSON.stringify(GENERIC_DEFAULT_SUBJECTS));
@@ -325,13 +325,16 @@
   }
 
   // --- THEME ---
+  const SUN_SVG = `<svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>`;
+  const MOON_SVG = `<svg viewBox="0 0 24 24"><path d="M12.3 2C6.5 2 1.8 6.7 1.8 12.5S6.5 23 12.3 23c4.8 0 8.8-3.2 10.1-7.7-.6.2-1.3.3-2 .3-5.2 0-9.5-4.3-9.5-9.5 0-1.4.3-2.7.8-3.9-1.3-.2-2.5-.2-3.7-.2z"/></svg>`;
+
   function setupTheme() {
     if (isDarkMode) {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      themeIcon.textContent = '☀️';
-    } else {
       document.documentElement.removeAttribute('data-theme');
-      themeIcon.textContent = '🌙';
+      if (themeIcon) themeIcon.innerHTML = SUN_SVG;
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      if (themeIcon) themeIcon.innerHTML = MOON_SVG;
     }
   }
 
@@ -549,13 +552,13 @@
             ${slot.enabled ? '' : 'disabled'}
           >${escapeHtml(slot.notes)}</textarea>
           <div class="bullet-hint">
-            <span>💡 Separate points with new lines</span>
+            <span>Separate points with new lines</span>
             <div class="card-actions-bar">
               <button type="button" class="btn-block-action paste-notes-btn" data-slot="${slot.slotKey}" ${slot.enabled ? '' : 'disabled'} title="Paste text from clipboard">
-                📋 Paste
+                Paste
               </button>
               <button type="button" class="btn-block-action clear-notes-btn" data-slot="${slot.slotKey}" ${slot.enabled ? '' : 'disabled'} title="Clear notes for this block">
-                🧹 Clear
+                Clear
               </button>
             </div>
           </div>
@@ -595,10 +598,10 @@
           </div>
         </div>
         <div class="manager-actions">
-          <button class="action-icon-btn move-up" data-index="${index}" title="Move Up" ${index === 0 ? 'disabled' : ''}>⬆️</button>
-          <button class="action-icon-btn move-down" data-index="${index}" title="Move Down" ${index === subjects.length - 1 ? 'disabled' : ''}>⬇️</button>
-          <button class="action-icon-btn edit-sub" data-id="${subject.id}" title="Edit Subject">✏️</button>
-          <button class="action-icon-btn delete delete-sub" data-id="${subject.id}" title="Delete Subject">🗑️</button>
+          <button class="action-icon-btn move-up" data-index="${index}" title="Move Up" ${index === 0 ? 'disabled' : ''}>↑</button>
+          <button class="action-icon-btn move-down" data-index="${index}" title="Move Down" ${index === subjects.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="action-icon-btn edit-sub" data-id="${subject.id}" title="Edit Subject">✎</button>
+          <button class="action-icon-btn delete delete-sub" data-id="${subject.id}" title="Delete Subject">✕</button>
         </div>
       `;
 
@@ -618,7 +621,7 @@
       }
     });
 
-    currentEditorDayTitle.textContent = `📅 ${selectedEditorDay} Schedule (8 Periods)`;
+    currentEditorDayTitle.textContent = `${selectedEditorDay} Schedule (8 Periods)`;
 
     const periodSubjectIds = timetable[selectedEditorDay] || [];
     daySubjectCount.textContent = `${periodSubjectIds.length} Period Slots`;
