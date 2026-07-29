@@ -437,6 +437,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-4);
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pane-info {
+  min-width: 0;
 }
 
 .pane-info h2 {
@@ -445,6 +451,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-weight: 700;
   letter-spacing: var(--tracking-display);
   color: var(--fg);
+  word-break: break-word;
 }
 
 .day-tag {
@@ -490,6 +497,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   padding: 6px var(--space-3);
   font-size: var(--text-xs);
   border-radius: var(--radius-md);
+  white-space: nowrap;
 }
 
 .btn-lg {
@@ -805,6 +813,7 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .day-selector-pills {
@@ -1197,6 +1206,20 @@ input:checked + .slider:before {
   padding: 6px var(--space-4);
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-soft);
+}
+
+/* Mobile Responsive Enhancements */
+@media (max-width: 520px) {
+  .pane-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .pane-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 /* Responsive Layout */
