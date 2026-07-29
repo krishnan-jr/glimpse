@@ -463,11 +463,17 @@
   }
 
   function renderDateAndDayHeader() {
-    const keycapDateStr = getFormattedKeycapDate(selectedDate);
-    const dayStr = getFormattedDayOfWeek(selectedDate);
+    const dayName = DAYS_OF_WEEK[selectedDate.getDay()];
+    const dd = String(selectedDate.getDate()).padStart(2, '0');
+    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(selectedDate.getFullYear());
 
-    todayFormattedDateEl.textContent = keycapDateStr;
-    todayFormattedDayEl.textContent = dayStr.replace(/\*/g, '');
+    if (todayFormattedDateEl) {
+      todayFormattedDateEl.textContent = `${dd} / ${mm} / ${yyyy}`;
+    }
+    if (todayFormattedDayEl) {
+      todayFormattedDayEl.textContent = dayName;
+    }
   }
 
   function getActiveDaySlots() {
@@ -808,19 +814,21 @@
     }
 
     // Re-apply Timetable Button
-    reapplyTimetableBtn.addEventListener('click', () => {
-      const dayName = DAYS_OF_WEEK[selectedDate.getDay()];
-      
-      // Reset toggles to enabled for today
-      for (let i = 0; i < 8; i++) {
-        currentEnabled[getSlotKey(i)] = true;
-      }
-      saveEnabledToStorage();
+    if (reapplyTimetableBtn) {
+      reapplyTimetableBtn.addEventListener('click', () => {
+        const dayName = DAYS_OF_WEEK[selectedDate.getDay()];
+        
+        // Reset toggles to enabled for today
+        for (let i = 0; i < 8; i++) {
+          currentEnabled[getSlotKey(i)] = true;
+        }
+        saveEnabledToStorage();
 
-      renderSubjectEntryCards();
-      renderWhatsAppPreview();
-      showToast(`Re-applied timetable for ${dayName}`);
-    });
+        renderSubjectEntryCards();
+        renderWhatsAppPreview();
+        showToast(`Re-applied timetable for ${dayName}`);
+      });
+    }
 
     // Timetable Day Selector Pills
     daySelectorPills.addEventListener('click', (e) => {
