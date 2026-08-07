@@ -1244,13 +1244,16 @@ input:checked + .slider:before {
   background-color: var(--surface-warm);
   color: var(--fg);
   border: 1px solid var(--border);
-  padding: 12px var(--space-5);
+  padding: 10px 20px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   font-size: var(--text-sm);
   font-weight: 600;
+  white-space: nowrap;
+  max-width: calc(100vw - 32px);
   box-shadow: var(--elev-raised);
   z-index: 200;
   opacity: 0;
