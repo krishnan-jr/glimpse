@@ -1645,6 +1645,46 @@ input:checked + .slider:before {
   gap: var(--space-2);
 }
 
+/* Circular Full-Red Arrow Button in Program Card Header */
+.btn-round-arrow {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: #ffffff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(230, 0, 35, 0.25);
+  transition: transform var(--motion-fast) var(--ease-standard),
+              background-color var(--motion-fast) var(--ease-standard),
+              box-shadow var(--motion-fast) var(--ease-standard);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.btn-round-arrow:hover {
+  background-color: var(--accent-hover);
+  transform: scale(1.1);
+  box-shadow: 0 6px 14px rgba(230, 0, 35, 0.35);
+}
+
+.btn-round-arrow:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 6px rgba(230, 0, 35, 0.25);
+}
+
+.btn-round-arrow svg {
+  width: 18px;
+  height: 18px;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
 .att-card-title-group h3 {
   font-size: var(--text-lg);
   font-weight: 700;

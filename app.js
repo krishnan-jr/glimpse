@@ -1631,6 +1631,12 @@
               <h3>${escapeHtml(prog.name)}</h3>
               ${prog.description ? `<div class="att-card-subtitle">${escapeHtml(prog.description)}</div>` : ''}
             </div>
+            <button type="button" class="btn-round-arrow att-open-prog-btn" data-id="${prog.id}" title="Open ${escapeHtml(prog.name)}" aria-label="Open Program">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
           </div>
 
           <div class="att-card-stats">
@@ -1640,7 +1646,6 @@
           </div>
 
           <div class="att-card-actions">
-            <button class="btn btn-primary btn-sm att-open-prog-btn" data-id="${prog.id}">Open</button>
             <button class="btn btn-subtle btn-sm att-edit-prog-btn" data-id="${prog.id}">✎ Edit</button>
             <button class="btn btn-subtle btn-sm att-delete-prog-btn" data-id="${prog.id}" style="color: var(--danger);">✕ Delete</button>
           </div>
