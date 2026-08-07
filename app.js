@@ -166,8 +166,8 @@
       const hash = decodeURIComponent(window.location.hash).toUpperCase();
       const search = decodeURIComponent(window.location.search).toUpperCase();
 
-      const is2G = pathname.includes('/2G') || pathname.endsWith('2G') || hash.includes('2G') || search.includes('2G');
-      const isENG = pathname.includes('/ENG') || pathname.endsWith('ENG') || hash.includes('ENG') || search.includes('ENG');
+      const is2G = pathname === '/2G' || pathname.endsWith('/2G') || hash === '#2G' || hash === '#/2G' || search === '?2G' || search === '?2G/';
+      const isENG = pathname === '/ENG' || pathname.endsWith('/ENG') || hash === '#ENG' || hash === '#/ENG' || search === '?ENG' || search === '?ENG/';
 
       if (is2G) {
         loadPreset2G();
@@ -1240,13 +1240,14 @@
     isNavigatingFromRouter = true;
     const { path, params } = parseHash(hashStr);
 
-    if (path.toUpperCase().includes('2G')) {
+    const rawHash = (hashStr || '').toUpperCase();
+    if (rawHash === '#2G' || rawHash === '#/2G' || rawHash === '2G') {
       loadPreset2G();
       isNavigatingFromRouter = false;
       return;
     }
 
-    if (path.toUpperCase().includes('ENG')) {
+    if (rawHash === '#ENG' || rawHash === '#/ENG' || rawHash === 'ENG') {
       loadPresetENG();
       isNavigatingFromRouter = false;
       return;
