@@ -387,9 +387,6 @@
           openBackupModal();
           showToast('Unlocked Secret Hub! 🔑');
         } else {
-          if (clickCount >= 5) {
-            showToast(`${10 - clickCount} click${10 - clickCount === 1 ? '' : 's'} to open Secret Hub`);
-          }
           resetTimer = setTimeout(() => {
             clickCount = 0;
           }, 4000);
