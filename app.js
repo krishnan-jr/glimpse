@@ -1003,7 +1003,7 @@
       });
 
       if (confirmed) {
-        timetable = JSON.parse(JSON.stringify(DEFAULT_TIMETABLE));
+        timetable = JSON.parse(JSON.stringify(GENERIC_DEFAULT_TIMETABLE));
         saveTimetableToStorage();
         applyTimetableForDate(selectedDate);
         renderAll();
@@ -1150,8 +1150,8 @@
       });
 
       if (confirmed) {
-        subjects = JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
-        timetable = JSON.parse(JSON.stringify(DEFAULT_TIMETABLE));
+        subjects = JSON.parse(JSON.stringify(GENERIC_DEFAULT_SUBJECTS));
+        timetable = JSON.parse(JSON.stringify(GENERIC_DEFAULT_TIMETABLE));
         currentNotes = {};
         currentEnabled = {};
         saveSubjectsToStorage();
