@@ -238,6 +238,159 @@
     });
   }
 
+  // --- SECRET BACKUP & RESTORE FEATURE ---
+  function setupBackupSecretFeature() {
+    let clickCount = 0;
+    let resetTimer = null;
+
+    const pill = document.getElementById('madeWithLovePill');
+    if (pill) {
+      pill.addEventListener('click', () => {
+        clickCount++;
+        if (resetTimer) clearTimeout(resetTimer);
+
+        if (clickCount >= 10) {
+          clickCount = 0;
+          openBackupModal();
+        } else {
+          if (clickCount >= 6) {
+            showToast(`${10 - clickCount} clicks to open Secret Backup`);
+          }
+          resetTimer = setTimeout(() => {
+            clickCount = 0;
+          }, 3000);
+        }
+      });
+    }
+
+    const backupModal = document.getElementById('backupModal');
+    if (backupModal) {
+      backupModal.addEventListener('click', (e) => {
+        if (e.target === backupModal) closeBackupModal();
+      });
+    }
+
+    const closeBtn = document.getElementById('closeBackupModalBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeBackupModal);
+    }
+
+    const exportBtn = document.getElementById('backupExportBtn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        exportLocalStorageAsJson();
+      });
+    }
+
+    const importBtn = document.getElementById('backupImportBtn');
+    const importInput = document.getElementById('backupImportFileInput');
+
+    if (importBtn && importInput) {
+      importBtn.addEventListener('click', () => {
+        importInput.click();
+      });
+
+      importInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          importLocalStorageFromJson(file);
+          e.target.value = '';
+        }
+      });
+    }
+  }
+
+  function openBackupModal() {
+    const modal = document.getElementById('backupModal');
+    if (!modal) return;
+    modal.inert = false;
+    modal.classList.add('active');
+    modal.removeAttribute('aria-hidden');
+  }
+
+  function closeBackupModal() {
+    const modal = document.getElementById('backupModal');
+    if (!modal) return;
+    if (document.activeElement && modal.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.inert = true;
+  }
+
+  function exportLocalStorageAsJson() {
+    try {
+      const dump = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        dump[key] = localStorage.getItem(key);
+      }
+      const jsonStr = JSON.stringify(dump, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const dateStr = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `glimpse-backup-${dateStr}.json`);
+      showToast('Backup JSON exported successfully!');
+    } catch (err) {
+      console.error('Backup export failed:', err);
+      showAlertDialog('Backup Error', 'Failed to export application backup.');
+    }
+  }
+
+  function importLocalStorageFromJson(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target.result;
+        let data;
+        try {
+          data = JSON.parse(content);
+        } catch (pErr) {
+          showAlertDialog('Invalid File', 'The uploaded file is not a valid JSON document.');
+          return;
+        }
+
+        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+          showAlertDialog('Invalid Backup', 'JSON backup file must contain a key-value object.');
+          return;
+        }
+
+        const keysCount = Object.keys(data).length;
+        if (keysCount === 0) {
+          showAlertDialog('Empty Backup', 'The selected JSON backup file contains no data.');
+          return;
+        }
+
+        const confirmed = await showConfirmDialog({
+          title: 'Restore Backup',
+          message: `Are you sure you want to restore ${keysCount} item${keysCount === 1 ? '' : 's'} to localStorage? The page will reload to apply changes.`,
+          confirmText: 'Restore & Reload',
+          cancelText: 'Cancel'
+        });
+
+        if (confirmed) {
+          Object.keys(data).forEach(key => {
+            const val = typeof data[key] === 'string' ? data[key] : JSON.stringify(data[key]);
+            localStorage.setItem(key, val);
+          });
+          showToast('Backup restored! Reloading...');
+          closeBackupModal();
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        }
+      } catch (err) {
+        console.error('Backup import failed:', err);
+        showAlertDialog('Invalid File', 'An error occurred while reading the JSON backup file.');
+      }
+    };
+    reader.onerror = () => {
+      showAlertDialog('File Error', 'Could not read the uploaded JSON file.');
+    };
+    reader.readAsText(file);
+  }
+
   // Initialize App
   function init() {
     const isSecretPresetTriggered = checkUrlForSecretPreset();
@@ -253,6 +406,7 @@
     setupPWA();
     setupEventListeners();
     setupAttendanceEventListeners();
+    setupBackupSecretFeature();
     
     // Apply timetable for selected date
     applyTimetableForDate(selectedDate);
@@ -974,9 +1128,11 @@
     for (let i = 1; i <= participantCount; i++) {
       const fn = firstNames[(i - 1) % firstNames.length];
       const ln = lastNames[Math.floor((i - 1) / firstNames.length) % lastNames.length];
+      const rollNoStr = String(i);
       participants.push({
         id: `part_${i}`,
-        name: `${fn} ${ln}`
+        name: `${fn} ${ln}`,
+        rollNo: rollNoStr
       });
     }
 
@@ -1405,6 +1561,11 @@
         if (nameInput) nameInput.value = prog.name || '';
         if (descInput) descInput.value = prog.description || '';
         attFormParticipantsDraft = prog.participants ? JSON.parse(JSON.stringify(prog.participants)) : [];
+        attFormParticipantsDraft.forEach((p, idx) => {
+          const rNo = getParticipantRollNo(p, idx + 1);
+          p.rollNo = rNo;
+          delete p.rollno;
+        });
       }
     } else {
       if (titleEl) titleEl.textContent = 'Create New Program';
@@ -1417,9 +1578,53 @@
     showAttScreen('att-screen-program-form');
   }
 
+  function getParticipantRollNo(p, fallbackIndex = 1) {
+    if (!p) return String(fallbackIndex);
+    if (p.rollNo !== undefined && p.rollNo !== null && String(p.rollNo).trim() !== '') {
+      return String(p.rollNo).trim();
+    }
+    if (p.rollno !== undefined && p.rollno !== null && String(p.rollno).trim() !== '') {
+      return String(p.rollno).trim();
+    }
+    return String(fallbackIndex);
+  }
+
+  function getNextSuggestedRollNo() {
+    if (!attFormParticipantsDraft || attFormParticipantsDraft.length === 0) {
+      return '1';
+    }
+
+    let maxNum = 0;
+    let hasNumeric = false;
+
+    attFormParticipantsDraft.forEach((p, idx) => {
+      const rNo = getParticipantRollNo(p, idx + 1);
+      const parsed = parseInt(rNo, 10);
+      if (!isNaN(parsed) && String(parsed) === rNo.trim()) {
+        hasNumeric = true;
+        if (parsed > maxNum) maxNum = parsed;
+      }
+    });
+
+    if (hasNumeric && maxNum > 0) {
+      return String(maxNum + 1);
+    }
+
+    return String(attFormParticipantsDraft.length + 1);
+  }
+
+  function updateSuggestedRollNoInput() {
+    const rollNoInput = document.getElementById('attNewParticipantRollNo');
+    if (rollNoInput) {
+      rollNoInput.value = getNextSuggestedRollNo();
+    }
+  }
+
   function renderAttFormParticipants() {
     const badgeEl = document.getElementById('attParticipantCountBadge');
     if (badgeEl) badgeEl.textContent = attFormParticipantsDraft.length;
+
+    updateSuggestedRollNoInput();
 
     const container = document.getElementById('attParticipantsList');
     if (!container) return;
@@ -1430,11 +1635,12 @@
     }
 
     container.innerHTML = attFormParticipantsDraft.map((p, index) => {
+      const rollNo = getParticipantRollNo(p, index + 1);
       return `
         <div class="att-participant-item" data-id="${p.id}">
-          <span class="name-text">${index + 1}. ${escapeHtml(p.name)}</span>
+          <span class="name-text"><strong>${escapeHtml(rollNo)}.</strong> ${escapeHtml(p.name)}</span>
           <div class="item-actions">
-            <button type="button" class="action-icon-btn edit-participant-btn" data-id="${p.id}" title="Edit Name">✎</button>
+            <button type="button" class="action-icon-btn edit-participant-btn" data-id="${p.id}" title="Edit Attendee Details">✎</button>
             <button type="button" class="action-icon-btn delete delete-participant-btn" data-id="${p.id}" title="Remove Attendee">✕</button>
           </div>
         </div>
@@ -1444,17 +1650,18 @@
     container.querySelectorAll('.edit-participant-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.getAttribute('data-id');
-        const p = attFormParticipantsDraft.find(item => item.id === id);
-        if (p) {
-          const newName = await showPromptDialog({
-            title: 'Edit Attendee Name',
-            message: 'Enter updated attendee name:',
-            defaultValue: p.name,
-            confirmText: 'Save Name',
-            cancelText: 'Cancel'
+        const pIndex = attFormParticipantsDraft.findIndex(item => item.id === id);
+        if (pIndex !== -1) {
+          const p = attFormParticipantsDraft[pIndex];
+          const currentRollNo = getParticipantRollNo(p, pIndex + 1);
+          const updated = await showParticipantEditModal({
+            rollNo: currentRollNo,
+            name: p.name
           });
-          if (newName && newName.trim() !== '') {
-            p.name = newName.trim();
+          if (updated) {
+            p.rollNo = updated.rollNo;
+            delete p.rollno;
+            p.name = updated.name;
             renderAttFormParticipants();
           }
         }
@@ -1471,17 +1678,28 @@
   }
 
   function handleAddParticipantFromInput() {
+    const rollNoInput = document.getElementById('attNewParticipantRollNo');
     const input = document.getElementById('attNewParticipantInput');
     if (!input) return;
 
     const val = input.value.trim();
     if (!val) return;
 
+    const specifiedRollNo = rollNoInput ? rollNoInput.value.trim() : '';
+
     const names = val.split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
-    names.forEach(name => {
+    names.forEach((name, idx) => {
+      let rollNo = specifiedRollNo;
+      if (!rollNo) {
+        rollNo = getNextSuggestedRollNo();
+      } else if (idx > 0 && !isNaN(parseInt(specifiedRollNo, 10))) {
+        rollNo = String(parseInt(specifiedRollNo, 10) + idx);
+      }
+
       attFormParticipantsDraft.push({
-        id: 'part_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-        name: name
+        id: 'part_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6) + '_' + idx,
+        name: name,
+        rollNo: rollNo
       });
     });
 
@@ -1492,6 +1710,12 @@
 
   function saveProgramForm(e) {
     if (e) e.preventDefault();
+
+    // Auto-add any attendee currently typed in input before saving
+    const input = document.getElementById('attNewParticipantInput');
+    if (input && input.value.trim() !== '') {
+      handleAddParticipantFromInput();
+    }
 
     const nameInput = document.getElementById('attProgName');
     const descInput = document.getElementById('attProgDesc');
@@ -1504,6 +1728,8 @@
       return;
     }
 
+    let savedProgramId = attFormEditingProgramId;
+
     if (attFormEditingProgramId) {
       const prog = attendanceData.programs.find(p => p.id === attFormEditingProgramId);
       if (prog) {
@@ -1512,8 +1738,9 @@
         prog.participants = JSON.parse(JSON.stringify(attFormParticipantsDraft));
       }
     } else {
+      savedProgramId = 'prog_' + Date.now();
       const newProgram = {
-        id: 'prog_' + Date.now(),
+        id: savedProgramId,
         name: name,
         description: desc,
         createdAt: new Date().toISOString(),
@@ -1526,7 +1753,12 @@
     saveAttendanceDataToStorage();
     showToast(attFormEditingProgramId ? 'Program updated!' : 'Program created!');
     renderAttProgramsList();
-    showAttScreen('att-screen-programs');
+
+    if (savedProgramId) {
+      openProgramMatrix(savedProgramId);
+    } else {
+      showAttScreen('att-screen-programs');
+    }
   }
 
   // --- SCREEN 3: ATTENDANCE MATRIX DASHBOARD ---
@@ -1645,11 +1877,13 @@
 
     // Body Rows
     tableHtml += `<tbody>`;
-    filteredParticipants.forEach(p => {
+    filteredParticipants.forEach((p, index) => {
       let presentCount = 0;
+      const origIndex = (prog.participants || []).findIndex(item => item.id === p.id);
+      const rollNo = getParticipantRollNo(p, origIndex >= 0 ? origIndex + 1 : index + 1);
 
       tableHtml += `<tr>`;
-      tableHtml += `<td class="cell-participant">${escapeHtml(p.name)}</td>`;
+      tableHtml += `<td class="cell-participant">${escapeHtml(rollNo)}. ${escapeHtml(p.name)}</td>`;
 
       sortedSessions.forEach(sess => {
         const record = sess.records ? sess.records[p.id] : null;
@@ -1724,7 +1958,10 @@
 
     sessions.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    const rows = participants.map(participant => {
+    const rows = participants.map((participant, index) => {
+      const origIndex = (prog.participants || []).findIndex(item => item.id === participant.id);
+      const rollNo = getParticipantRollNo(participant, origIndex >= 0 ? origIndex + 1 : index + 1);
+      const participantNameWithNum = `${rollNo}. ${participant.name}`;
       let presentCount = 0;
       const statuses = sessions.map(session => {
         const rawStatus = session.records ? session.records[participant.id] : null;
@@ -1738,6 +1975,8 @@
 
       return {
         participant,
+        rollNo,
+        participantNameWithNum,
         statuses,
         summary: sessions.length ? `${presentCount}/${sessions.length} (${Math.round((presentCount / sessions.length) * 100)}%)` : '0/0 (0%)'
       };
@@ -1783,12 +2022,51 @@
     exportModal.inert = true;
   }
 
-  function sanitizeFilenamePart(value) {
-    return String(value || 'attendance')
-      .trim()
-      .replace(/[^a-z0-9]+/gi, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase() || 'attendance';
+  function getFilterPillDateString() {
+    if (attViewMode === 'week') {
+      const start = getStartOfWeek(attAnchorDate);
+      const end = getEndOfWeek(attAnchorDate);
+      return `${formatShortDate(start)} - ${formatShortDate(end)}`;
+    }
+    if (attViewMode === 'month') {
+      return formatMonthYear(attAnchorDate);
+    }
+    if (attViewMode === 'day') {
+      return formatShortDate(attAnchorDate);
+    }
+    if (attViewMode === 'custom') {
+      const parseLocalISO = (iso) => {
+        if (!iso) return null;
+        const parts = iso.split('-').map(Number);
+        if (parts.length !== 3 || parts.some(isNaN)) return null;
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      };
+      const fromD = parseLocalISO(attCustomFromDate);
+      const toD = parseLocalISO(attCustomToDate);
+      if (fromD && toD) {
+        return `${formatShortDate(fromD)} - ${formatShortDate(toD)}`;
+      }
+      if (fromD) {
+        return `From ${formatShortDate(fromD)}`;
+      }
+      if (toD) {
+        return `Until ${formatShortDate(toD)}`;
+      }
+      return 'All Dates';
+    }
+    return formatShortDate(attAnchorDate);
+  }
+
+  function getExportFilename(programName, extension) {
+    const prog = (programName || 'Program').trim();
+    const dateRange = getFilterPillDateString();
+    const rawFilename = `${prog} - ${dateRange}`;
+    const safeFilename = rawFilename
+      .replace(/[\/\\:*?"<>|]/g, '-')
+      .replace(/\s+/g, ' ')
+      .replace(/-+/g, '-')
+      .trim();
+    return `${safeFilename}.${extension}`;
   }
 
   function downloadBlob(blob, filename) {
@@ -1880,14 +2158,12 @@
     headerLabels.forEach((label, index) => {
       const w = columnWidths[index] || 120;
       drawCell(x, 0, w, headerHeight, surfaceWarm, borderStrong);
-      drawText(label.toUpperCase(), x + (index === 0 ? 16 : w / 2), headerHeight / 2 - (index > 0 && index < headerLabels.length - 1 ? 10 : 0), w - 24, {
+      drawText(label.toUpperCase(), x + (index === 0 ? 16 : w / 2), headerHeight / 2, w - 24, {
         align: index === 0 ? 'left' : 'center',
         size: 13,
         weight: 700
       });
-      if (index > 0 && index < headerLabels.length - 1) {
-        drawText('✎    ✕', x + w / 2, headerHeight / 2 + 18, w - 24, { color: muted, size: 15, weight: 600 });
-      }
+      // no edit/delete icons in exported image
       x += w;
     });
 
@@ -1897,7 +2173,7 @@
       x = 0;
 
       drawCell(x, y, columnWidths[0] || 220, h, surface);
-      drawText(row.participant.name, x + 16, y + h / 2, (columnWidths[0] || 220) - 24, { align: 'left', size: 14, weight: 600 });
+      drawText(row.participantNameWithNum || row.participant.name, x + 16, y + h / 2, (columnWidths[0] || 220) - 24, { align: 'left', size: 14, weight: 600 });
       x += columnWidths[0] || 220;
 
       row.statuses.forEach((status, statusIndex) => {
@@ -1935,7 +2211,7 @@
         showAlertDialog('Export Failed', 'Could not create the JPG export.');
         return;
       }
-      const filename = `${sanitizeFilenamePart(data.prog.name)}-attendance.jpg`;
+      const filename = getExportFilename(data.prog ? data.prog.name : '', 'jpg');
       downloadBlob(blob, filename);
       showToast('JPG export downloaded');
     }, 'image/jpeg', 0.95);
@@ -1963,7 +2239,7 @@
 
   function createSheetXml(data) {
     const header = ['Attendee', ...data.sessions.map(s => formatDateLabel(s.date)), 'Attendance Summary'];
-    const rows = [header, ...data.rows.map(row => [row.participant.name, ...row.statuses, row.summary])];
+    const rows = [header, ...data.rows.map(row => [row.participantNameWithNum || row.participant.name, ...row.statuses, row.summary])];
     const sheetRows = rows.map((row, rowIndex) => {
       const cells = row.map((value, colIndex) => {
         const ref = `${columnName(colIndex)}${rowIndex + 1}`;
@@ -2081,7 +2357,8 @@
 
     const zipBytes = createZip(files);
     const blob = new Blob([zipBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    downloadBlob(blob, `${sanitizeFilenamePart(data.prog.name)}-attendance.xlsx`);
+    const filename = getExportFilename(data.prog ? data.prog.name : '', 'xlsx');
+    downloadBlob(blob, filename);
     showToast('XLSX export downloaded');
   }
 
@@ -2105,7 +2382,7 @@
 
     data.rows.forEach(row => {
       const status = row.statuses[0] === 'Present' ? '🟢 Present' : row.statuses[0] === 'Absent' ? '🔴 Absent' : 'Not Recorded';
-      lines.push(`${row.participant.name}  ${status}`);
+      lines.push(`${row.participantNameWithNum || row.participant.name}  ${status}`);
     });
 
     return lines.join('\n');
@@ -2233,13 +2510,15 @@
       return;
     }
 
-    container.innerHTML = filtered.map(p => {
+    container.innerHTML = filtered.map((p, index) => {
+      const origIndex = (prog.participants || []).findIndex(item => item.id === p.id);
+      const rollNo = getParticipantRollNo(p, origIndex >= 0 ? origIndex + 1 : index + 1);
       const status = attRecordRosterDraft[p.id] || 'present';
       const isPresent = status === 'present';
 
       return `
         <div class="att-record-item" data-id="${p.id}">
-          <span class="participant-name">${escapeHtml(p.name)}</span>
+          <span class="participant-name">${escapeHtml(rollNo)}. ${escapeHtml(p.name)}</span>
           <button type="button" class="att-toggle-btn ${isPresent ? 'present' : 'absent'}" data-id="${p.id}">
             <span class="dot-icon">${isPresent ? '🟢' : '🔴'}</span>
             <span>${isPresent ? 'Present' : 'Absent'}</span>
@@ -2383,6 +2662,16 @@
     const addParticipantBtn = document.getElementById('attAddParticipantBtn');
     if (addParticipantBtn) {
       addParticipantBtn.addEventListener('click', handleAddParticipantFromInput);
+    }
+
+    const newParticipantRollNoInput = document.getElementById('attNewParticipantRollNo');
+    if (newParticipantRollNoInput) {
+      newParticipantRollNoInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAddParticipantFromInput();
+        }
+      });
     }
 
     const newParticipantInput = document.getElementById('attNewParticipantInput');
@@ -2738,6 +3027,78 @@
         promptInput.focus();
         promptInput.select();
       }, 50);
+    });
+  }
+
+  function showParticipantEditModal(options = {}) {
+    return new Promise((resolve) => {
+      const {
+        rollNo = '',
+        name = ''
+      } = options;
+
+      const modal = document.getElementById('attParticipantModal');
+      const rollNoInput = document.getElementById('attEditParticipantRollNo');
+      const nameInput = document.getElementById('attEditParticipantName');
+      const form = document.getElementById('attParticipantForm');
+      const cancelBtn = document.getElementById('attCancelParticipantModalBtn');
+
+      if (!modal || !form || !rollNoInput || !nameInput) {
+        const newName = window.prompt('Enter attendee name:', name);
+        if (newName !== null) {
+          const newRoll = window.prompt('Enter roll number:', rollNo) || rollNo;
+          resolve({ name: newName.trim(), rollNo: newRoll.trim() });
+        } else {
+          resolve(null);
+        }
+        return;
+      }
+
+      rollNoInput.value = rollNo;
+      nameInput.value = name;
+
+      modal.inert = false;
+      modal.classList.add('active');
+      modal.removeAttribute('aria-hidden');
+
+      setTimeout(() => {
+        nameInput.focus();
+        nameInput.select();
+      }, 50);
+
+      const cleanup = () => {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.inert = true;
+        form.removeEventListener('submit', onSubmit);
+        cancelBtn.removeEventListener('click', onCancel);
+        modal.removeEventListener('click', onOverlayClick);
+      };
+
+      const onSubmit = (e) => {
+        e.preventDefault();
+        const rVal = rollNoInput.value.trim();
+        const nVal = nameInput.value.trim();
+        if (!nVal) return;
+        cleanup();
+        resolve({ rollNo: rVal || rollNo, name: nVal });
+      };
+
+      const onCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      const onOverlayClick = (e) => {
+        if (e.target === modal) {
+          cleanup();
+          resolve(null);
+        }
+      };
+
+      form.addEventListener('submit', onSubmit);
+      cancelBtn.addEventListener('click', onCancel);
+      modal.addEventListener('click', onOverlayClick);
     });
   }
 
