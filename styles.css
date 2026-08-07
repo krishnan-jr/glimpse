@@ -2486,7 +2486,8 @@ input:checked + .slider:before {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  padding: 3px 10px;
+  min-height: 32px;
   transition: background var(--motion-fast);
 }
 
@@ -2496,7 +2497,7 @@ input:checked + .slider:before {
 
 .att-record-item .participant-name {
   font-weight: 600;
-  font-size: var(--text-sm);
+  font-size: 13px;
   color: var(--fg);
 }
 
@@ -2504,10 +2505,10 @@ input:checked + .slider:before {
 .att-toggle-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 5px;
+  padding: 3px 10px;
   border-radius: var(--radius-pill);
-  font-size: var(--text-sm);
+  font-size: 12px;
   font-weight: 700;
   border: none;
   cursor: pointer;
