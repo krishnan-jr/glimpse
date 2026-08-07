@@ -1,7 +1,7 @@
 {
-  "name": "Glimpse of Today",
+  "name": "Glimpse",
   "short_name": "Glimpse",
-  "description": "WhatsApp Daily Class Session Updates Generator",
+  "description": "Glimpse Classroom Application",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",

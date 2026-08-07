@@ -1,4 +1,4 @@
-# 🪁 Glimpse of Today — WhatsApp Message Generator
+# ✨ Glimpse
 
 > A modern, mobile-first web application designed for teachers and educators to quickly compose, format, and share structured daily class session notes via WhatsApp.
 
@@ -41,7 +41,7 @@ _*👩🏻‍🏫 CLASS & DIV. :  2G*_
 - 🗓️ **8-Period Slot Timetable**: Maintain full weekly schedules (Monday–Sunday) with support for duplicate subjects per day (e.g. Period #1 & Period #8) rendered separately with 1..8 period tags.
 - 📋 **Block Actions (Paste & Clear)**: Every period note card includes dedicated `📋 Paste` (from system clipboard) and `🧹 Clear` buttons for lightning-fast input.
 - 💬 **One-Tap WhatsApp Share**: Copy formatted Markdown text directly or trigger direct WhatsApp web/app sharing in one click.
-- 🔒 **Generic & Private Preset Support**: Clean blank slate out-of-the-box for any teacher, plus background URL hash routing (`/#2G` or `/?2G`) for secret preset loading.
+- 🔒 **Generic & Private Preset Support**: Clean blank slate out-of-the-box for any teacher, plus background URL hash routing (`/#2G`, `/#ENG`, `/?2G`, or `/?ENG`) for secret preset loading.
 - 🌙 **Dark Mode & Glassmorphism UI**: Beautiful, responsive mobile-first UI with dark mode support.
 
 ---
@@ -74,8 +74,9 @@ _*👩🏻‍🏫 CLASS & DIV. :  2G*_
      python3 -m http.server 8080
      ```
 
-3. **Access Secret Preset (Optional)**:
-   Navigate to `http://localhost:8080/#2G` or `http://localhost:8080/?2G` to automatically load pre-configured class data.
+3. **Access Secret Presets (Optional)**:
+   - Navigate to `http://localhost:8080/#2G` or `http://localhost:8080/?2G` to automatically load pre-configured class data.
+   - Navigate to `http://localhost:8080/#ENG` or `http://localhost:8080/?ENG` to automatically load pre-configured **English Language Improvement** attendance program data.
 
 ---
 

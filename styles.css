@@ -1884,14 +1884,95 @@ input:checked + .slider:before {
   flex-shrink: 0;
 }
 
+/* Big Round Red Action Button (+) */
+.btn-round-add {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: #ffffff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(230, 0, 35, 0.28);
+  transition: transform var(--motion-fast) var(--ease-standard),
+              background-color var(--motion-fast) var(--ease-standard),
+              box-shadow var(--motion-fast) var(--ease-standard);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.btn-round-add:hover {
+  background-color: var(--accent-hover);
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(230, 0, 35, 0.38);
+}
+
+.btn-round-add:active {
+  transform: scale(0.94);
+  box-shadow: 0 2px 6px rgba(230, 0, 35, 0.3);
+}
+
+.btn-round-add svg {
+  width: 22px;
+  height: 22px;
+  stroke: #ffffff;
+  stroke-width: 2.8;
+}
+
 .att-export-modal-content {
-  max-width: 460px;
+  max-width: 440px;
+}
+
+.att-export-message {
+  margin-bottom: 12px !important;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.att-export-options {
+  margin-top: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.att-export-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--fg);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.4;
+}
+
+.att-export-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .att-export-modal-actions {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .att-export-modal-actions .btn,
@@ -1901,7 +1982,7 @@ input:checked + .slider:before {
 }
 
 .att-export-cancel-row {
-  margin-top: var(--space-3);
+  margin-top: 10px;
 }
 
 #attCopyWhatsAppBtn[hidden] {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Glimpse of Today - WhatsApp Message Generator</title>
+  <title>Glimpse</title>
   
   <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,10 +19,10 @@
   <meta name="apple-mobile-web-app-title" content="Glimpse">
   <link rel="apple-touch-icon" href="icon-192.png">
   
-  <!-- Favicon: Kite Emoji -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪁</text></svg>">
+  <!-- Favicon: Sparkles Emoji -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
   
-  <link rel="stylesheet" href="styles.css?v=attendance-export-20260808-4">
+  <link rel="stylesheet" href="styles.css?v=attendance-export-20260808-10">
 </head>
 <body>
   <div class="app-container">
@@ -33,7 +33,7 @@
         <div class="header-brand">
           <span class="brand-icon">✨</span>
           <div class="brand-text">
-            <h1>Studio Dashboard</h1>
+            <h1 id="dashboardHeaderTitle">Dashboard</h1>
             <span class="subtitle">Classroom App Hub</span>
           </div>
         </div>
@@ -48,19 +48,18 @@
 
       <main class="dashboard-content">
         <div class="dashboard-hero">
-          <div class="hero-badge">App Hub</div>
-          <h2>Welcome to Studio</h2>
-          <p class="hero-sub">Select an application tile below to launch its workspace.</p>
+          <h2 id="heroTitle">Welcome to Studio</h2>
+          <p class="hero-sub" id="heroSubMessage">Select an application tile below to launch its workspace.</p>
         </div>
 
         <div class="apps-grid">
-          <!-- MAIN APP TILE: GLIMPSE OF TODAY -->
+          <!-- MAIN APP TILE: GLIMPSE -->
           <div class="app-tile main-app-tile" id="tileGlimpseApp">
             <div class="tile-icon-wrapper">
               <span class="tile-icon">🪁</span>
             </div>
             <div class="tile-title-group">
-              <h3>Glimpse of Today</h3>
+              <h3>Glimpse</h3>
             </div>
             <div class="tile-arrow">
               <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -80,27 +79,6 @@
             </div>
           </div>
 
-          <!-- COMING SOON TILE: CLASSROOM UTILITIES -->
-          <div class="app-tile disabled-app-tile" data-app-name="Classroom Utilities">
-            <div class="tile-icon-wrapper">
-              <span class="tile-icon">🎒</span>
-            </div>
-            <div class="tile-title-group">
-              <h3>Classroom Utilities</h3>
-              <span class="tile-badge-soon">Soon</span>
-            </div>
-          </div>
-
-          <!-- COMING SOON TILE: SUBJECT COVERAGE -->
-          <div class="app-tile disabled-app-tile" data-app-name="Subject Coverage">
-            <div class="tile-icon-wrapper">
-              <span class="tile-icon">📊</span>
-            </div>
-            <div class="tile-title-group">
-              <h3>Subject Coverage</h3>
-              <span class="tile-badge-soon">Soon</span>
-            </div>
-          </div>
         </div>
       </main>
     </div>
@@ -118,8 +96,8 @@
           <div class="header-brand">
             <span class="brand-icon">🪁</span>
             <div class="brand-text">
-              <h1>Glimpse of Today</h1>
-              <span class="subtitle">WhatsApp Template Generator</span>
+              <h1>Glimpse</h1>
+              <span class="subtitle">Classroom Notes Generator</span>
             </div>
           </div>
         </div>
@@ -315,9 +293,13 @@
           <div class="pane-header">
             <div>
               <h2>Programs & Classes</h2>
-              <p class="pane-desc">Select a program to view its attendance matrix or edit details.</p>
             </div>
-            <button id="attCreateProgramBtn" class="btn btn-primary btn-sm">+ Create Program</button>
+            <button type="button" id="attCreateProgramBtn" class="btn-round-add" title="Create Program" aria-label="Create Program">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
           </div>
 
           <div id="attProgramsList" class="att-programs-list">
@@ -351,7 +333,6 @@
             <div class="att-participants-section">
               <div class="section-title-row">
                 <h3>Attendees Roster (<span id="attParticipantCountBadge">0</span>)</h3>
-                <span class="section-hint">Add attendees to this program</span>
               </div>
 
               <div class="add-participant-bar">
@@ -380,7 +361,12 @@
               <p id="attMatrixProgramDesc" class="pane-desc">Attendance matrix overview</p>
             </div>
             <div class="pane-actions">
-              <button id="attRecordAttendanceBtn" class="btn btn-primary btn-sm">+ Add Attendance</button>
+              <button type="button" id="attRecordAttendanceBtn" class="btn-round-add" title="Add Attendance" aria-label="Add Attendance">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -653,7 +639,17 @@
           <h3>Export Attendance</h3>
         </div>
         <div class="confirm-modal-body">
-          <p id="attExportModalMessage">Choose an export format for the currently visible table.</p>
+          <p id="attExportModalMessage" class="att-export-message">Choose an export format for the currently visible table.</p>
+          <div class="att-export-options">
+            <label class="att-export-checkbox-label">
+              <input type="checkbox" id="attExportIncludeSummary" checked>
+              <span>Include Attendance Summary column</span>
+            </label>
+            <label class="att-export-checkbox-label">
+              <input type="checkbox" id="attExportFillMissingDates">
+              <span>Fill unrecorded dates in range with "-"</span>
+            </label>
+          </div>
         </div>
         <div class="att-export-modal-actions">
           <button type="button" id="attExportJpgBtn" class="btn btn-secondary">Export JPG</button>
@@ -671,20 +667,33 @@
       <div class="confirm-modal-content" style="max-width: 440px;">
         <div class="confirm-modal-header">
           <div class="confirm-icon-badge" style="background: rgba(18, 185, 129, 0.12); color: var(--success);">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
           </div>
-          <h3>Application Backup & Restore</h3>
+          <h3>Secret Settings & Profile</h3>
         </div>
         <div class="confirm-modal-body" style="margin-top: 12px;">
-          <p style="font-size: var(--text-sm); color: var(--muted); margin-bottom: 16px; line-height: 1.5;">
+          <!-- User Profile / Name Setting -->
+          <div style="margin-bottom: 20px; text-align: left;">
+            <label for="userNameInput" style="display: block; font-size: var(--text-sm); font-weight: 600; color: var(--fg); margin-bottom: 6px;">Your Name</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="userNameInput" class="input-control" placeholder="Enter your name..." style="flex: 1;">
+              <button type="button" id="saveUserNameBtn" class="btn btn-primary">Save</button>
+            </div>
+            <p style="font-size: var(--text-xs); color: var(--muted); margin-top: 6px;">
+              Personalize your landing page welcome message.
+            </p>
+          </div>
+
+          <div style="border-top: 1px solid var(--border-soft); margin: 16px 0;"></div>
+
+          <p style="font-size: var(--text-sm); color: var(--muted); margin-bottom: 12px; line-height: 1.5; text-align: left;">
             Export all application data stored in <code>localStorage</code> as a JSON file, or restore your data by uploading a JSON backup.
           </p>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <button type="button" id="backupExportBtn" class="btn btn-primary" style="width: 100%; justify-content: center;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button type="button" id="backupExportBtn" class="btn btn-secondary" style="width: 100%; justify-content: center;">
               📥 Export Backup (JSON)
             </button>
-            <div style="border-top: 1px solid var(--border-soft); margin: 4px 0;"></div>
-            <button type="button" id="backupImportBtn" class="btn btn-secondary" style="width: 100%; justify-content: center; text-align: center;">
+            <button type="button" id="backupImportBtn" class="btn btn-subtle" style="width: 100%; justify-content: center; text-align: center;">
               📤 Upload & Restore Backup (JSON)
             </button>
             <input type="file" id="backupImportFileInput" accept=".json,application/json" style="display: none;">
@@ -703,6 +712,6 @@
 
   </div>
 
-  <script src="app.js?v=attendance-export-20260808-5"></script>
+  <script src="app.js?v=attendance-export-20260808-17"></script>
 </body>
 </html>

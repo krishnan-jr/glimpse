@@ -1,4 +1,4 @@
-// Glimpse of Today - WhatsApp Template Generator Application Engine
+// Glimpse Application Engine
 
 (function() {
   'use strict';
@@ -48,6 +48,29 @@
     'Saturday': ['sub_1', 'sub_2', 'sub_3', 'sub_4', 'sub_5', 'sub_6', 'sub_7', 'sub_8'],
     'Sunday': ['sub_1', 'sub_2', 'sub_3', 'sub_4', 'sub_5', 'sub_6', 'sub_7', 'sub_8']
   };
+
+  // Secret Preset Data for ENG Attendance Program
+  const PRESET_ENG_ATTENDEES = [
+    'Ms. Bhagya',
+    'Ms. Susan',
+    'Ms. Preetha S',
+    'Ms. Sheela A R',
+    'Ms. Divya Laxmi P S',
+    'Ms. Arya Mohan',
+    'Ms. Reshmi R',
+    'Ms. Sabeena S',
+    'Ms. Thasleena',
+    'Ms. Fathima Rani',
+    'Ms. Zeena Beevi',
+    'Ms. Anciya',
+    'Ms. Saleela',
+    'Ms. Sumayya Mol',
+    'Ms. Lina',
+    'Ms. Shabnam',
+    'Ms. Suja N',
+    'Ms. Shahnaz',
+    'Mr. Vineeth'
+  ];
 
   const KEYCAP_EMOJIS = {
     '0': '0️⃣',
@@ -136,7 +159,7 @@
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toastMessage');
 
-  // Secret URL preset detector (/2G or #2G or ?2G)
+  // Secret URL preset detector (/2G or #2G or ?2G, /ENG or #ENG or ?ENG)
   function checkUrlForSecretPreset() {
     try {
       const pathname = decodeURIComponent(window.location.pathname).toUpperCase();
@@ -144,9 +167,14 @@
       const search = decodeURIComponent(window.location.search).toUpperCase();
 
       const is2G = pathname.includes('/2G') || pathname.endsWith('2G') || hash.includes('2G') || search.includes('2G');
+      const isENG = pathname.includes('/ENG') || pathname.endsWith('ENG') || hash.includes('ENG') || search.includes('ENG');
 
       if (is2G) {
         loadPreset2G();
+        return true;
+      }
+      if (isENG) {
+        loadPresetENG();
         return true;
       }
     } catch (e) {
@@ -177,6 +205,55 @@
 
     setTimeout(() => {
       showToast('Loaded Class Timetable & Subjects! 🏫');
+    }, 400);
+  }
+
+  function loadPresetENG() {
+    loadAttendanceDataFromStorage();
+    if (!attendanceData.programs) attendanceData.programs = [];
+
+    const engProgramId = 'prog_eng_improvement';
+    let existingProg = attendanceData.programs.find(p => p.id === engProgramId || (p.name && p.name.toUpperCase() === 'ENGLISH LANGUAGE IMPROVEMENT'));
+
+    const participantsList = PRESET_ENG_ATTENDEES.map((name, index) => ({
+      id: `part_eng_${index + 1}`,
+      name: name,
+      rollNo: String(index + 1)
+    }));
+
+    if (existingProg) {
+      existingProg.id = engProgramId;
+      existingProg.name = 'English Language Improvement';
+      existingProg.description = 'Team D';
+      existingProg.participants = participantsList;
+      if (!existingProg.sessions) existingProg.sessions = [];
+    } else {
+      existingProg = {
+        id: engProgramId,
+        name: 'English Language Improvement',
+        description: 'Team D',
+        createdAt: new Date().toISOString(),
+        participants: participantsList,
+        sessions: []
+      };
+      attendanceData.programs.unshift(existingProg);
+    }
+
+    saveAttendanceDataToStorage();
+
+    const viewDashboard = document.getElementById('view-dashboard');
+    const viewGlimpseApp = document.getElementById('view-glimpse-app');
+    const viewAttendanceApp = document.getElementById('view-attendance-app');
+
+    if (viewDashboard) viewDashboard.classList.remove('active');
+    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    openProgramMatrix(engProgramId, true);
+
+    setTimeout(() => {
+      showToast('Loaded English Language Improvement Program! 🇬🇧');
     }, 400);
   }
 
@@ -238,6 +315,143 @@
     });
   }
 
+  // --- 100 FEELGOOD MESSAGES, QUOTES, AND QUESTIONS ---
+  const FEELGOOD_MESSAGES_100 = [
+    "Believe you can and you're halfway there. — Theodore Roosevelt",
+    "Every day is a fresh start and a new chance to shine.",
+    "What small win brought a smile to your face today?",
+    "Keep your face always toward the sunshine—and shadows will fall behind you. — Walt Whitman",
+    "You are capable of amazing things.",
+    "What is one thing you are grateful for right now?",
+    "Small steps every day lead to big results over time.",
+    "The best time to plant a tree was 20 years ago. The second best time is now.",
+    "Your energy is contagious—spread kindness today.",
+    "What exciting project are you looking forward to working on today?",
+    "Do what you can, with what you have, where you are. — Theodore Roosevelt",
+    "Happiness is not something readymade. It comes from your own actions. — Dalai Lama",
+    "What's a new skill or idea you'd love to explore this week?",
+    "Start where you are. Use what you have. Do what you can. — Arthur Ashe",
+    "You are stronger and wiser than you think.",
+    "What made you laugh recently?",
+    "The secret of getting ahead is getting started. — Mark Twain",
+    "Act as if what you do makes a difference. It does. — William James",
+    "What's a cozy moment you enjoyed today?",
+    "Dream big and dare to fail. — Norman Vaughan",
+    "Your speed doesn't matter; forward progress is forward progress.",
+    "Who is someone that brightened your day recently?",
+    "Focus on the beauty in tiny moments.",
+    "Make today so awesome that yesterday gets jealous!",
+    "What's one good deed you can do today?",
+    "Wherever you go, go with all your heart. — Confucius",
+    "Turn your obstacles into stepping stones for success.",
+    "What hobby or activity brings you pure peace?",
+    "Light tomorrow with today. — Elizabeth Barrett Browning",
+    "You make the world a better place just by being in it.",
+    "What is your favorite way to unwind after a productive day?",
+    "Great things never come from comfort zones.",
+    "Embrace the journey, enjoy the process, and celebrate the small wins.",
+    "What's a song that instantly lifts your mood?",
+    "Write it on your heart that every day is the best day in the year. — Ralph Waldo Emerson",
+    "Be the reason someone smiles today.",
+    "What positive message would you share with your past self?",
+    "Peace comes from within; nurture it every day.",
+    "Strive for progress, not perfection.",
+    "What is one goal you feel super passionate about?",
+    "You are standard-issue awesome!",
+    "Calculated risks and curiosity lead to wondrous discoveries.",
+    "What's the best piece of advice you've ever received?",
+    "Magic happens when you don't give up.",
+    "The future belongs to those who believe in the beauty of their dreams. — Eleanor Roosevelt",
+    "What is something that made you feel proud of yourself recently?",
+    "Radiate positivity and watch good things manifest around you.",
+    "Every mistake is just a lesson leading to growth.",
+    "What place brings you the most peaceful thoughts?",
+    "Kindness is a language which the deaf can hear and the blind can see. — Mark Twain",
+    "Your potential is unlimited—keep building!",
+    "What's a simple pleasure that never fails to delight you?",
+    "Today is a great day to learn something new.",
+    "Be yourself; everyone else is already taken. — Oscar Wilde",
+    "What accomplishment are you celebrating this month?",
+    "Positive mind, positive vibes, positive life.",
+    "Don't count the days, make the days count. — Muhammad Ali",
+    "What delicious food made your day extra special?",
+    "Opportunities don't happen, you create them. — Chris Grosser",
+    "Take a deep breath; you're doing great!",
+    "What is a creative idea you've been pondering lately?",
+    "Stay curious, stay humble, and keep exploring.",
+    "Spread love everywhere you go. — Mother Teresa",
+    "What's a book or story that inspired you deeply?",
+    "Clear minds make great decisions.",
+    "The only limit to our realization of tomorrow is our doubts of today. — Franklin D. Roosevelt",
+    "What acts of kindness have you noticed around you?",
+    "Happiness grows when shared with others.",
+    "Everything you can imagine is real. — Pablo Picasso",
+    "What's a milestone you are working toward right now?",
+    "Choose joy today, no matter how small.",
+    "In the middle of every difficulty lies opportunity. — Albert Einstein",
+    "What makes you feel energized and ready to take on the world?",
+    "Doubt kills more dreams than failure ever will. — Suzy Kassem",
+    "You are creating your own story—make it inspiring!",
+    "What is a funny memory that still makes you chuckle?",
+    "Life is short, make every moment count.",
+    "When you focus on the good, the good gets better.",
+    "What is something beautiful you saw today?",
+    "Never shrink yourself for someone else's comfort.",
+    "Small acts of kindness make a giant splash.",
+    "What's your favorite way to spend a quiet morning?",
+    "It always seems impossible until it's done. — Nelson Mandela",
+    "Courage is grace under pressure. — Ernest Hemingway",
+    "What quote inspires you whenever you feel challenged?",
+    "Growth begins at the end of your comfort zone.",
+    "You are an original—there is nobody else like you!",
+    "What is a dream destination on your bucket list?",
+    "Smile—it's free therapy!",
+    "Success is the sum of small efforts repeated day in and day out. — Robert Collier",
+    "What's your secret power when tackling a tough task?",
+    "There are so many reasons to be happy.",
+    "Shine your light bright and inspire others to do the same.",
+    "What is a tradition or ritual that brings you joy?",
+    "The best is yet to come!",
+    "Believe in your inner strength and resilience.",
+    "What is one thing you can do today for your self-care?",
+    "Happiness is a state of mind—choose joy today.",
+    "Every accomplishment starts with the decision to try.",
+    "What exciting adventure awaits you next?"
+  ];
+
+  const VIBRANT_NAME_COLORS = [
+    '#FF4757', '#2ED573', '#1E90FF', '#FFA502', '#9B59B6',
+    '#00D2D3', '#FF6B81', '#70A1FF', '#7BED9F', '#FFA801',
+    '#E056FD', '#686DE0', '#00BEC4', '#BE2EDD', '#48DBFB',
+    '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#3B82F6',
+    '#EF4444', '#14B8A6', '#F97316', '#D946EF', '#06B6D4'
+  ];
+
+  function updateLandingPageHero() {
+    const heroTitle = document.getElementById('heroTitle');
+    const heroSubMessage = document.getElementById('heroSubMessage');
+    const dashboardHeaderTitle = document.getElementById('dashboardHeaderTitle');
+
+    if (dashboardHeaderTitle) {
+      dashboardHeaderTitle.textContent = 'Dashboard';
+    }
+
+    const userName = localStorage.getItem('glimpse_user_name');
+    if (heroTitle) {
+      if (userName && userName.trim() !== '') {
+        const randomColor = VIBRANT_NAME_COLORS[Math.floor(Math.random() * VIBRANT_NAME_COLORS.length)];
+        heroTitle.innerHTML = `Welcome, <span id="heroUserNameSpan" style="color: ${randomColor}; font-weight: 800;">${escapeHtml(userName.trim())}</span>`;
+      } else {
+        heroTitle.textContent = 'Welcome to Studio';
+      }
+    }
+
+    if (heroSubMessage) {
+      const randomIndex = Math.floor(Math.random() * FEELGOOD_MESSAGES_100.length);
+      heroSubMessage.textContent = FEELGOOD_MESSAGES_100[randomIndex];
+    }
+  }
+
   // --- SECRET BACKUP & RESTORE FEATURE ---
   function setupBackupSecretFeature() {
     let clickCount = 0;
@@ -252,13 +466,43 @@
         if (clickCount >= 10) {
           clickCount = 0;
           openBackupModal();
+          showToast('Unlocked Secret Hub! 🔑');
         } else {
-          if (clickCount >= 6) {
-            showToast(`${10 - clickCount} clicks to open Secret Backup`);
+          if (clickCount >= 5) {
+            showToast(`${10 - clickCount} click${10 - clickCount === 1 ? '' : 's'} to open Secret Hub`);
           }
           resetTimer = setTimeout(() => {
             clickCount = 0;
-          }, 3000);
+          }, 4000);
+        }
+      });
+    }
+
+    const saveNameBtn = document.getElementById('saveUserNameBtn');
+    const userNameInput = document.getElementById('userNameInput');
+
+    function saveUserName() {
+      if (!userNameInput) return;
+      const val = userNameInput.value.trim();
+      if (val) {
+        localStorage.setItem('glimpse_user_name', val);
+        showToast(`Name saved! Welcome, ${val} ✨`);
+      } else {
+        localStorage.removeItem('glimpse_user_name');
+        showToast('Name cleared.');
+      }
+      updateLandingPageHero();
+    }
+
+    if (saveNameBtn) {
+      saveNameBtn.addEventListener('click', saveUserName);
+    }
+
+    if (userNameInput) {
+      userNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveUserName();
         }
       });
     }
@@ -303,9 +547,16 @@
   function openBackupModal() {
     const modal = document.getElementById('backupModal');
     if (!modal) return;
+    const nameInput = document.getElementById('userNameInput');
+    if (nameInput) {
+      nameInput.value = localStorage.getItem('glimpse_user_name') || '';
+    }
     modal.inert = false;
     modal.classList.add('active');
     modal.removeAttribute('aria-hidden');
+    if (nameInput) {
+      setTimeout(() => nameInput.focus(), 100);
+    }
   }
 
   function closeBackupModal() {
@@ -407,6 +658,7 @@
     setupEventListeners();
     setupAttendanceEventListeners();
     setupBackupSecretFeature();
+    updateLandingPageHero();
     
     // Apply timetable for selected date
     applyTimetableForDate(selectedDate);
@@ -997,6 +1249,12 @@
       return;
     }
 
+    if (path.toUpperCase().includes('ENG')) {
+      loadPresetENG();
+      isNavigatingFromRouter = false;
+      return;
+    }
+
     if (path.startsWith('glimpse')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
@@ -1052,6 +1310,7 @@
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewDashboard) viewDashboard.classList.add('active');
+      updateLandingPageHero();
     }
 
     isNavigatingFromRouter = false;
@@ -1080,6 +1339,7 @@
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewDashboard) viewDashboard.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    updateLandingPageHero();
     navigateToRoute('#/dashboard');
   }
 
@@ -1108,69 +1368,6 @@
 
   // ─────────────────────────────────────────────────────────────────────────
   // ATTENDANCE MODULE ENGINE
-  // Helper to generate 100+ sample participants & 100+ session date records for prog_sample_1
-  function generateSample100Data(participantCount = 105, sessionCount = 100) {
-    const firstNames = [
-      'Aarav', 'Ananya', 'Aditya', 'Avani', 'Arjun', 'Bhavya', 'Chetan', 'Devansh',
-      'Divya', 'Esha', 'Farhan', 'Gautam', 'Harini', 'Ishita', 'Jai', 'Kavya',
-      'Karan', 'Lakshmi', 'Manav', 'Meera', 'Nikhil', 'Neha', 'Om', 'Pooja',
-      'Parth', 'Rohan', 'Riya', 'Siddharth', 'Shreya', 'Tushar', 'Tanya', 'Utkarsh',
-      'Varun', 'Vidya', 'Yash', 'Zoya', 'Alex', 'Bella', 'Charlie', 'Daniel',
-      'Emma', 'Felix', 'Grace', 'Hannah', 'Ian', 'Julia', 'Kevin', 'Liam'
-    ];
-    
-    const lastNames = [
-      'Sharma', 'Patel', 'Kumar', 'Verma', 'Nair', 'Gupta', 'Joshi', 'Khan',
-      'Singh', 'Reddy', 'Chowdhury', 'Iyer', 'Deshmukh', 'Mehta', 'Rao', 'Bhat'
-    ];
-
-    const participants = [];
-    for (let i = 1; i <= participantCount; i++) {
-      const fn = firstNames[(i - 1) % firstNames.length];
-      const ln = lastNames[Math.floor((i - 1) / firstNames.length) % lastNames.length];
-      const rollNoStr = String(i);
-      participants.push({
-        id: `part_${i}`,
-        name: `${fn} ${ln}`,
-        rollNo: rollNoStr
-      });
-    }
-
-    const sessions = [];
-    const startDate = new Date('2026-04-29');
-    for (let s = 0; s < sessionCount; s++) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + s);
-      const dateStr = d.toISOString().split('T')[0];
-
-      const records = {};
-      participants.forEach((p, idx) => {
-        const isAbsent = (idx + s * 7) % 9 === 0;
-        records[p.id] = isAbsent ? 'absent' : 'present';
-      });
-
-      sessions.push({
-        id: `sess_${s + 1}`,
-        date: dateStr,
-        records: records
-      });
-    }
-
-    return {
-      programs: [
-        {
-          id: 'prog_sample_1',
-          name: 'Class 2G - Main Roster',
-          description: `Daily classroom attendance (${participantCount} Students, ${sessionCount} Sessions)`,
-          createdAt: new Date().toISOString(),
-          participants: participants,
-          sessions: sessions
-        }
-      ]
-    };
-  }
-
-  const DEFAULT_ATTENDANCE_DATA = generateSample100Data();
 
   let attendanceData = { programs: [] };
   let attCurrentActiveProgramId = null;
@@ -1354,40 +1551,6 @@
     renderAttMatrixTable();
   }
 
-  // Console Helper for Manual Developer Testing
-  window.seedTestData = function(count = 105, sessionCount = 100) {
-    const sample = generateSample100Data(count, sessionCount);
-    const newProg = sample.programs[0];
-
-    let data = { programs: [] };
-    try {
-      const saved = localStorage.getItem('glimpse_attendance_data_v1');
-      if (saved) data = JSON.parse(saved);
-    } catch (e) {}
-
-    let prog = data.programs.find(p => p.id === 'prog_sample_1');
-    if (!prog) {
-      data.programs.unshift(newProg);
-    } else {
-      prog.participants = newProg.participants;
-      prog.sessions = newProg.sessions;
-      prog.description = `Daily classroom attendance (${newProg.participants.length} Students, ${newProg.sessions.length} Sessions)`;
-    }
-
-    localStorage.setItem('glimpse_attendance_data_v1', JSON.stringify(data));
-    attendanceData = data;
-
-    if (attCurrentActiveProgramId === 'prog_sample_1') {
-      renderAttMatrixTable();
-    } else {
-      renderAttProgramsList();
-    }
-
-    showToast(`Seeded ${newProg.participants.length} participants & ${newProg.sessions.length} sessions! 🚀`);
-    console.log(`✅ Seeded ${newProg.participants.length} participants and ${newProg.sessions.length} attendance sessions for prog_sample_1 into Local Storage.`);
-    return `Seeded ${newProg.participants.length} participants & ${newProg.sessions.length} sessions for prog_sample_1 in Local Storage.`;
-  };
-
   // Storage Handlers
   function loadAttendanceDataFromStorage() {
     try {
@@ -1395,23 +1558,13 @@
       if (saved) {
         attendanceData = JSON.parse(saved);
         if (!attendanceData.programs) attendanceData.programs = [];
-
-        // Auto-upgrade sample program 1 to 105+ participants & 100+ sessions if outdated
-        const sampleProg = attendanceData.programs.find(p => p.id === 'prog_sample_1');
-        if (sampleProg && (!sampleProg.sessions || sampleProg.sessions.length < 50 || !sampleProg.participants || sampleProg.participants.length < 50)) {
-          const freshData = generateSample100Data();
-          sampleProg.participants = freshData.programs[0].participants;
-          sampleProg.sessions = freshData.programs[0].sessions;
-          sampleProg.description = `Daily classroom attendance (${freshData.programs[0].participants.length} Students, ${freshData.programs[0].sessions.length} Sessions)`;
-          saveAttendanceDataToStorage();
-        }
       } else {
-        attendanceData = generateSample100Data();
+        attendanceData = { programs: [] };
         saveAttendanceDataToStorage();
       }
     } catch (e) {
       console.error('Error loading attendance data:', e);
-      attendanceData = generateSample100Data();
+      attendanceData = { programs: [] };
     }
   }
 
@@ -1927,7 +2080,36 @@
     });
   }
 
-  function getVisibleAttendanceMatrixData() {
+  function getAllDatesInRange(startIso, endIso) {
+    if (!startIso || !endIso) return [];
+    const parseLocalISO = (iso) => {
+      const parts = iso.split('-').map(Number);
+      if (parts.length !== 3 || parts.some(isNaN)) return null;
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    };
+    const start = parseLocalISO(startIso);
+    const end = parseLocalISO(endIso);
+    if (!start || !end || start > end) return [];
+
+    const dates = [];
+    const cur = new Date(start);
+    while (cur <= end) {
+      dates.push(toISODateString(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return dates;
+  }
+
+  function getExportOptions() {
+    const includeSummaryInput = document.getElementById('attExportIncludeSummary');
+    const fillMissingDatesInput = document.getElementById('attExportFillMissingDates');
+    return {
+      includeSummary: includeSummaryInput ? includeSummaryInput.checked : true,
+      fillMissingDates: fillMissingDatesInput ? fillMissingDatesInput.checked : false
+    };
+  }
+
+  function getVisibleAttendanceMatrixData(options = {}) {
     const prog = attendanceData.programs.find(p => p.id === attCurrentActiveProgramId);
     if (!prog) return null;
 
@@ -1938,22 +2120,56 @@
     }
 
     let sessions = [...(prog.sessions || [])];
+    let rangeStart = null;
+    let rangeEnd = null;
+
     if (attViewMode === 'week') {
-      const start = toISODateString(getStartOfWeek(attAnchorDate));
-      const end = toISODateString(getEndOfWeek(attAnchorDate));
-      sessions = sessions.filter(s => s.date >= start && s.date <= end);
+      rangeStart = toISODateString(getStartOfWeek(attAnchorDate));
+      rangeEnd = toISODateString(getEndOfWeek(attAnchorDate));
+      sessions = sessions.filter(s => s.date >= rangeStart && s.date <= rangeEnd);
     } else if (attViewMode === 'month') {
-      const monthPrefix = `${attAnchorDate.getFullYear()}-${String(attAnchorDate.getMonth() + 1).padStart(2, '0')}`;
-      sessions = sessions.filter(s => s.date.startsWith(monthPrefix));
+      const year = attAnchorDate.getFullYear();
+      const monthIndex = attAnchorDate.getMonth();
+      const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+      rangeStart = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+      rangeEnd = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      sessions = sessions.filter(s => s.date >= rangeStart && s.date <= rangeEnd);
     } else if (attViewMode === 'day') {
-      const targetDay = toISODateString(attAnchorDate);
-      sessions = sessions.filter(s => s.date === targetDay);
+      rangeStart = toISODateString(attAnchorDate);
+      rangeEnd = rangeStart;
+      sessions = sessions.filter(s => s.date === rangeStart);
     } else if (attViewMode === 'custom') {
+      rangeStart = attCustomFromDate || null;
+      rangeEnd = attCustomToDate || null;
       sessions = sessions.filter(s => {
-        if (attCustomFromDate && s.date < attCustomFromDate) return false;
-        if (attCustomToDate && s.date > attCustomToDate) return false;
+        if (rangeStart && s.date < rangeStart) return false;
+        if (rangeEnd && s.date > rangeEnd) return false;
         return true;
       });
+    }
+
+    if (options.fillMissingDates) {
+      let startIso = rangeStart;
+      let endIso = rangeEnd;
+      if (!startIso || !endIso) {
+        const sortedAll = [...(prog.sessions || [])].sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (sortedAll.length > 0) {
+          if (!startIso) startIso = sortedAll[0].date;
+          if (!endIso) endIso = sortedAll[sortedAll.length - 1].date;
+        } else {
+          startIso = toISODateString(attAnchorDate);
+          endIso = startIso;
+        }
+      }
+
+      if (startIso && endIso) {
+        const datesInRange = getAllDatesInRange(startIso, endIso);
+        const existingMap = new Map(sessions.map(s => [s.date, s]));
+        sessions = datesInRange.map(dateStr => {
+          if (existingMap.has(dateStr)) return existingMap.get(dateStr);
+          return { id: 'unrecorded-' + dateStr, date: dateStr, isVirtual: true, records: {} };
+        });
+      }
     }
 
     sessions.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -1970,7 +2186,7 @@
           return 'Present';
         }
         if (rawStatus === 'absent') return 'Absent';
-        return 'Not Recorded';
+        return '-';
       });
 
       return {
@@ -1985,14 +2201,17 @@
     return { prog, participants, sessions, rows };
   }
 
-  function openAttendanceExportDialog() {
-    const exportModal = document.getElementById('attExportModal');
+  function updateExportModalMessage() {
     const exportMessage = document.getElementById('attExportModalMessage');
     const whatsappBtn = document.getElementById('attCopyWhatsAppBtn');
-    const data = getVisibleAttendanceMatrixData();
+    const options = getExportOptions();
+    const data = getVisibleAttendanceMatrixData(options);
 
     if (!data || data.participants.length === 0 || data.sessions.length === 0) {
-      showAlertDialog('Nothing to Export', 'The currently visible attendance table has no exportable rows.');
+      if (exportMessage) {
+        exportMessage.textContent = 'The currently visible attendance table has no exportable rows.';
+      }
+      if (whatsappBtn) whatsappBtn.hidden = true;
       return;
     }
 
@@ -2003,6 +2222,19 @@
     if (whatsappBtn) {
       whatsappBtn.hidden = data.sessions.length !== 1;
     }
+  }
+
+  function openAttendanceExportDialog() {
+    const exportModal = document.getElementById('attExportModal');
+    const options = getExportOptions();
+    const data = getVisibleAttendanceMatrixData(options);
+
+    if (!data || data.participants.length === 0 || data.sessions.length === 0) {
+      showAlertDialog('Nothing to Export', 'The currently visible attendance table has no exportable rows.');
+      return;
+    }
+
+    updateExportModalMessage();
 
     if (!exportModal) return;
 
@@ -2101,19 +2333,37 @@
 
   async function exportVisibleAttendanceAsJpg() {
     const table = document.querySelector('#attMatrixTableContainer .att-table');
-    const data = getVisibleAttendanceMatrixData();
-    if (!table || !data) {
+    const options = getExportOptions();
+    const data = getVisibleAttendanceMatrixData(options);
+    if (!data) {
       showAlertDialog('Nothing to Export', 'The attendance table is not available yet.');
       return;
     }
 
+    const includeSummary = options.includeSummary !== false;
     const rootStyles = getComputedStyle(document.documentElement);
-    const thEls = Array.from(table.querySelectorAll('thead th'));
-    const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
-    const columnWidths = thEls.map(th => Math.ceil(th.getBoundingClientRect().width));
-    const rowHeights = bodyRows.map(row => Math.ceil(row.getBoundingClientRect().height));
-    const headerHeight = Math.ceil(table.querySelector('thead tr').getBoundingClientRect().height);
-    const width = Math.max(table.scrollWidth, columnWidths.reduce((sum, w) => sum + w, 0));
+    const thEls = table ? Array.from(table.querySelectorAll('thead th')) : [];
+    const bodyRows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
+
+    const headerLabels = [
+      `Attendee (${data.participants.length})`,
+      ...data.sessions.map(session => formatDateLabel(session.date))
+    ];
+    if (includeSummary) {
+      headerLabels.push('Attendance Summary');
+    }
+
+    const nameColWidth = Math.max(220, thEls[0] ? Math.ceil(thEls[0].getBoundingClientRect().width) : 220);
+    const dateColWidths = data.sessions.map((_, i) => thEls[i + 1] ? Math.ceil(thEls[i + 1].getBoundingClientRect().width) : 110);
+    const columnWidths = [nameColWidth, ...dateColWidths];
+    if (includeSummary) {
+      const summaryColW = thEls[thEls.length - 1] ? Math.ceil(thEls[thEls.length - 1].getBoundingClientRect().width) : 150;
+      columnWidths.push(summaryColW);
+    }
+
+    const rowHeights = data.rows.map((_, i) => bodyRows[i] ? Math.ceil(bodyRows[i].getBoundingClientRect().height) : 52);
+    const headerHeight = (table && table.querySelector('thead tr')) ? Math.ceil(table.querySelector('thead tr').getBoundingClientRect().height) : 48;
+    const width = columnWidths.reduce((sum, w) => sum + w, 0);
     const height = headerHeight + rowHeights.reduce((sum, h) => sum + h, 0);
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -2150,11 +2400,6 @@
     };
 
     let x = 0;
-    const headerLabels = [
-      `Attendee (${data.participants.length})`,
-      ...data.sessions.map(session => formatDateLabel(session.date)),
-      'Attendance Summary'
-    ];
     headerLabels.forEach((label, index) => {
       const w = columnWidths[index] || 120;
       drawCell(x, 0, w, headerHeight, surfaceWarm, borderStrong);
@@ -2163,7 +2408,6 @@
         size: 13,
         weight: 700
       });
-      // no edit/delete icons in exported image
       x += w;
     });
 
@@ -2190,19 +2434,22 @@
         x += w;
       });
 
-      const summaryW = columnWidths[columnWidths.length - 1] || 150;
-      drawCell(x, y, summaryW, h, surface);
-      const pillW = Math.min(summaryW - 20, 118);
-      const pillH = 26;
-      const pillX = x + (summaryW - pillW) / 2;
-      const pillY = y + (h - pillH) / 2;
-      ctx.fillStyle = surfaceWarm;
-      ctx.strokeStyle = border;
-      ctx.beginPath();
-      ctx.roundRect(pillX, pillY, pillW, pillH, 13);
-      ctx.fill();
-      ctx.stroke();
-      drawText(row.summary, x + summaryW / 2, y + h / 2, pillW - 12, { size: 12, weight: 700 });
+      if (includeSummary) {
+        const summaryW = columnWidths[columnWidths.length - 1] || 150;
+        drawCell(x, y, summaryW, h, surface);
+        const pillW = Math.min(summaryW - 20, 118);
+        const pillH = 26;
+        const pillX = x + (summaryW - pillW) / 2;
+        const pillY = y + (h - pillH) / 2;
+        ctx.fillStyle = surfaceWarm;
+        ctx.strokeStyle = border;
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, pillW, pillH, 13);
+        ctx.fill();
+        ctx.stroke();
+        drawText(row.summary, x + summaryW / 2, y + h / 2, pillW - 12, { size: 12, weight: 700 });
+      }
+
       y += h;
     });
 
@@ -2237,9 +2484,24 @@
     return name;
   }
 
-  function createSheetXml(data) {
-    const header = ['Attendee', ...data.sessions.map(s => formatDateLabel(s.date)), 'Attendance Summary'];
-    const rows = [header, ...data.rows.map(row => [row.participantNameWithNum || row.participant.name, ...row.statuses, row.summary])];
+  function createSheetXml(data, options = {}) {
+    const includeSummary = options.includeSummary !== false;
+    const header = ['Attendee', ...data.sessions.map(s => formatDateLabel(s.date))];
+    if (includeSummary) {
+      header.push('Attendance Summary');
+    }
+
+    const rows = [
+      header,
+      ...data.rows.map(row => {
+        const r = [row.participantNameWithNum || row.participant.name, ...row.statuses];
+        if (includeSummary) {
+          r.push(row.summary);
+        }
+        return r;
+      })
+    ];
+
     const sheetRows = rows.map((row, rowIndex) => {
       const cells = row.map((value, colIndex) => {
         const ref = `${columnName(colIndex)}${rowIndex + 1}`;
@@ -2326,7 +2588,8 @@
   }
 
   function exportVisibleAttendanceAsXlsx() {
-    const data = getVisibleAttendanceMatrixData();
+    const options = getExportOptions();
+    const data = getVisibleAttendanceMatrixData(options);
     if (!data || data.participants.length === 0 || data.sessions.length === 0) {
       showAlertDialog('Nothing to Export', 'The currently visible attendance table has no exportable rows.');
       return;
@@ -2351,7 +2614,7 @@
       },
       {
         name: 'xl/worksheets/sheet1.xml',
-        content: createSheetXml(data)
+        content: createSheetXml(data, options)
       }
     ];
 
@@ -2775,6 +3038,16 @@
       exportModal.addEventListener('click', (e) => {
         if (e.target === exportModal) closeAttendanceExportDialog();
       });
+    }
+
+    const includeSummaryInput = document.getElementById('attExportIncludeSummary');
+    if (includeSummaryInput) {
+      includeSummaryInput.addEventListener('change', updateExportModalMessage);
+    }
+
+    const fillMissingDatesInput = document.getElementById('attExportFillMissingDates');
+    if (fillMissingDatesInput) {
+      fillMissingDatesInput.addEventListener('change', updateExportModalMessage);
     }
 
     const cancelExportBtn = document.getElementById('attCancelExportBtn');
