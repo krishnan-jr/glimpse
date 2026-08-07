@@ -173,6 +173,8 @@
     saveEnabledToStorage();
     saveSettingsToStorage();
 
+    openGlimpseApp();
+
     setTimeout(() => {
       showToast('Loaded Class Timetable & Subjects! 🏫');
     }, 400);
@@ -329,11 +331,14 @@
   const MOON_SVG = `<svg viewBox="0 0 24 24"><path d="M12.3 2C6.5 2 1.8 6.7 1.8 12.5S6.5 23 12.3 23c4.8 0 8.8-3.2 10.1-7.7-.6.2-1.3.3-2 .3-5.2 0-9.5-4.3-9.5-9.5 0-1.4.3-2.7.8-3.9-1.3-.2-2.5-.2-3.7-.2z"/></svg>`;
 
   function setupTheme() {
+    const themeSpans = document.querySelectorAll('.theme-icon-span');
     if (isDarkMode) {
       document.documentElement.removeAttribute('data-theme');
+      themeSpans.forEach(span => { span.innerHTML = SUN_SVG; });
       if (themeIcon) themeIcon.innerHTML = SUN_SVG;
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
+      themeSpans.forEach(span => { span.innerHTML = MOON_SVG; });
       if (themeIcon) themeIcon.innerHTML = MOON_SVG;
     }
   }
@@ -753,14 +758,51 @@
     });
   }
 
+  // --- APP VIEWS ROUTER & DASHBOARD PORTAL ---
+  const viewDashboard = document.getElementById('view-dashboard');
+  const viewGlimpseApp = document.getElementById('view-glimpse-app');
+  const tileGlimpseApp = document.getElementById('tileGlimpseApp');
+  const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+
+  function openGlimpseApp() {
+    if (viewDashboard) viewDashboard.classList.remove('active');
+    if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openDashboard() {
+    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewDashboard) viewDashboard.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setupViewNavigation() {
+    if (tileGlimpseApp) {
+      tileGlimpseApp.addEventListener('click', openGlimpseApp);
+    }
+    if (backToDashboardBtn) {
+      backToDashboardBtn.addEventListener('click', openDashboard);
+    }
+
+    const themeToggleBtns = document.querySelectorAll('.theme-toggle-btn');
+    themeToggleBtns.forEach(btn => {
+      btn.addEventListener('click', toggleTheme);
+    });
+  }
+
   // --- EVENT LISTENERS ---
   function setupEventListeners() {
+    setupViewNavigation();
+
     // Theme toggle
-    themeToggleBtn.addEventListener('click', toggleTheme);
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', toggleTheme);
+    }
 
     // Hashchange listener for secret 2G route (#2G)
     window.addEventListener('hashchange', () => {
       if (checkUrlForSecretPreset()) {
+        openGlimpseApp();
         applyTimetableForDate(selectedDate);
         renderAll();
       }
