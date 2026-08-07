@@ -1618,6 +1618,7 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-height: 214px;
   transition: transform var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
 }
 
@@ -1642,6 +1643,12 @@ input:checked + .slider:before {
   font-size: var(--text-sm);
   color: var(--muted);
   margin-top: 2px;
+  min-height: calc(var(--text-sm) * var(--leading-body) * 2);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .att-card-stats {
@@ -1667,7 +1674,7 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-1);
+  margin-top: auto;
 }
 
 .att-empty-state {
@@ -1815,10 +1822,16 @@ input:checked + .slider:before {
 
 .att-matrix-controls {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--space-3);
+}
+
+.att-matrix-control-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
 }
 
 .search-input-wrapper {
@@ -1843,6 +1856,35 @@ input:checked + .slider:before {
 .matrix-stats-summary {
   font-size: var(--text-xs);
   color: var(--muted);
+}
+
+.att-export-btn {
+  min-height: 40px;
+  flex-shrink: 0;
+}
+
+.att-export-modal-content {
+  max-width: 460px;
+}
+
+.att-export-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+.att-export-modal-actions .btn,
+.att-export-cancel-row .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.att-export-cancel-row {
+  margin-top: var(--space-3);
+}
+
+#attCopyWhatsAppBtn[hidden] {
+  display: none;
 }
 
 /* Attendance Date Filter Panel */
@@ -2074,7 +2116,7 @@ input:checked + .slider:before {
   border-bottom: 2px solid var(--border);
 }
 
-/* Sticky left column: Participant Name */
+/* Sticky left column: Attendee Name */
 .att-table td.cell-participant {
   position: sticky;
   left: 0;
@@ -2085,7 +2127,7 @@ input:checked + .slider:before {
   border-right: 2px solid var(--border);
 }
 
-/* Sticky Top-Left Corner Cell: Participant Header */
+/* Sticky Top-Left Corner Cell: Attendee Header */
 .att-table thead th.col-participant {
   position: sticky;
   top: 0;

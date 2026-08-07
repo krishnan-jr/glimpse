@@ -22,7 +22,7 @@
   <!-- Favicon: Kite Emoji -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪁</text></svg>">
   
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=attendance-export-20260807-2">
 </head>
 <body>
   <div class="app-container">
@@ -314,7 +314,7 @@
         <section id="att-screen-programs" class="att-screen active">
           <div class="pane-header">
             <div>
-              <h2>Programs & Batches</h2>
+              <h2>Programs & Classes</h2>
               <p class="pane-desc">Select a program to view its attendance matrix or edit details.</p>
             </div>
             <button id="attCreateProgramBtn" class="btn btn-primary btn-sm">+ Create Program</button>
@@ -347,15 +347,15 @@
               <input type="text" id="attProgDesc" class="input-control" placeholder="e.g. Daily Classroom Batch 2026">
             </div>
 
-            <!-- Participants Roster Management -->
+            <!-- Attendees Roster Management -->
             <div class="att-participants-section">
               <div class="section-title-row">
-                <h3>Participants Roster (<span id="attParticipantCountBadge">0</span>)</h3>
-                <span class="section-hint">Add participants to this program</span>
+                <h3>Attendees Roster (<span id="attParticipantCountBadge">0</span>)</h3>
+                <span class="section-hint">Add attendees to this program</span>
               </div>
 
               <div class="add-participant-bar">
-                <input type="text" id="attNewParticipantInput" class="input-control" placeholder="Participant full name...">
+                <input type="text" id="attNewParticipantInput" class="input-control" placeholder="Attendee full name...">
                 <button type="button" id="attAddParticipantBtn" class="btn btn-secondary btn-sm">+ Add</button>
               </div>
 
@@ -431,9 +431,15 @@
           </div>
 
           <div class="att-matrix-controls">
-            <div class="search-input-wrapper">
-              <span class="search-icon">🔍</span>
-              <input type="text" id="attMatrixSearchInput" class="input-control search-input" placeholder="Search participant...">
+            <div class="att-matrix-control-row">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="attMatrixSearchInput" class="input-control search-input" placeholder="Search participant...">
+              </div>
+              <button type="button" id="attExportMatrixBtn" class="btn btn-secondary btn-sm att-export-btn">
+                <span aria-hidden="true">⇩</span>
+                <span>Export</span>
+              </button>
             </div>
             <div class="matrix-stats-summary" id="attMatrixStatsSummary">
               <!-- Summary text -->
@@ -593,11 +599,11 @@
           <div class="confirm-icon-badge" style="background: rgba(230, 0, 35, 0.15); color: var(--accent);">
             <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
           </div>
-          <h3 id="promptTitle">Edit Participant Name</h3>
+          <h3 id="promptTitle">Edit Attendee Name</h3>
         </div>
         <form id="promptForm">
           <div class="confirm-modal-body" style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
-            <p id="promptMessage" style="font-size: var(--text-sm); color: var(--muted);">Enter participant name:</p>
+            <p id="promptMessage" style="font-size: var(--text-sm); color: var(--muted);">Enter attendee name:</p>
             <input type="text" id="promptInput" class="input-control" required style="width: 100%;">
           </div>
           <div class="confirm-modal-actions" style="margin-top: 16px;">
@@ -608,6 +614,29 @@
       </div>
     </div>
 
+    <!-- Attendance Export Modal -->
+    <div id="attExportModal" class="modal-overlay" inert aria-hidden="true">
+      <div class="confirm-modal-content att-export-modal-content">
+        <div class="confirm-modal-header">
+          <div class="confirm-icon-badge">
+            <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7 7-7z"/></svg>
+          </div>
+          <h3>Export Attendance</h3>
+        </div>
+        <div class="confirm-modal-body">
+          <p id="attExportModalMessage">Choose an export format for the currently visible table.</p>
+        </div>
+        <div class="att-export-modal-actions">
+          <button type="button" id="attExportJpgBtn" class="btn btn-secondary">Export JPG</button>
+          <button type="button" id="attExportXlsxBtn" class="btn btn-secondary">Export XLSX</button>
+          <button type="button" id="attCopyWhatsAppBtn" class="btn btn-whatsapp">Copy WhatsApp</button>
+        </div>
+        <div class="confirm-modal-actions att-export-cancel-row">
+          <button type="button" id="attCancelExportBtn" class="btn btn-subtle">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast-notification">
       <span id="toastMessage">Copied to clipboard!</span>
@@ -615,6 +644,6 @@
 
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=attendance-export-20260807-2"></script>
 </body>
 </html>

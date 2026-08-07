@@ -1328,7 +1328,7 @@
           </div>
 
           <div class="att-card-stats">
-            <span class="att-stat-badge">👥 ${pCount} ${pCount === 1 ? 'Participant' : 'Participants'}</span>
+            <span class="att-stat-badge">👥 ${pCount} ${pCount === 1 ? 'Attendee' : 'Attendees'}</span>
             <span class="att-stat-badge">📅 ${sCount} ${sCount === 1 ? 'Session' : 'Sessions'}</span>
             <span class="att-stat-badge">🕒 ${lastDateText}</span>
           </div>
@@ -1425,7 +1425,7 @@
     if (!container) return;
 
     if (attFormParticipantsDraft.length === 0) {
-      container.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 12px; font-size: var(--text-xs);">No participants added yet. Enter full name above to build your roster.</div>`;
+      container.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 12px; font-size: var(--text-xs);">No attendees added yet. Enter full name above to build your roster.</div>`;
       return;
     }
 
@@ -1435,7 +1435,7 @@
           <span class="name-text">${index + 1}. ${escapeHtml(p.name)}</span>
           <div class="item-actions">
             <button type="button" class="action-icon-btn edit-participant-btn" data-id="${p.id}" title="Edit Name">✎</button>
-            <button type="button" class="action-icon-btn delete delete-participant-btn" data-id="${p.id}" title="Remove Participant">✕</button>
+            <button type="button" class="action-icon-btn delete delete-participant-btn" data-id="${p.id}" title="Remove Attendee">✕</button>
           </div>
         </div>
       `;
@@ -1447,8 +1447,8 @@
         const p = attFormParticipantsDraft.find(item => item.id === id);
         if (p) {
           const newName = await showPromptDialog({
-            title: 'Edit Participant Name',
-            message: 'Enter updated participant name:',
+            title: 'Edit Attendee Name',
+            message: 'Enter updated attendee name:',
             defaultValue: p.name,
             confirmText: 'Save Name',
             cancelText: 'Cancel'
@@ -1596,7 +1596,7 @@
 
     if (statsSummary) {
       const totalSessionsCount = (prog.sessions || []).length;
-      statsSummary.textContent = `Participants: ${filteredParticipants.length} | Sessions in Range: ${sortedSessions.length} (Total Recorded: ${totalSessionsCount})`;
+      statsSummary.textContent = `Attendees: ${filteredParticipants.length} | Sessions in Range: ${sortedSessions.length} (Total Recorded: ${totalSessionsCount})`;
     }
 
     if (filteredParticipants.length === 0) {
@@ -1624,7 +1624,7 @@
 
     // Header Row
     tableHtml += `<thead><tr>`;
-    tableHtml += `<th class="col-participant">Participant (${filteredParticipants.length})</th>`;
+    tableHtml += `<th class="col-participant">Attendee (${filteredParticipants.length})</th>`;
 
     sortedSessions.forEach(sess => {
       tableHtml += `
@@ -1691,6 +1691,451 @@
         deleteAttendanceSession(date);
       });
     });
+  }
+
+  function getVisibleAttendanceMatrixData() {
+    const prog = attendanceData.programs.find(p => p.id === attCurrentActiveProgramId);
+    if (!prog) return null;
+
+    let participants = prog.participants || [];
+    if (attMatrixSearchQuery.trim() !== '') {
+      const q = attMatrixSearchQuery.toLowerCase().trim();
+      participants = participants.filter(p => p.name.toLowerCase().includes(q));
+    }
+
+    let sessions = [...(prog.sessions || [])];
+    if (attViewMode === 'week') {
+      const start = toISODateString(getStartOfWeek(attAnchorDate));
+      const end = toISODateString(getEndOfWeek(attAnchorDate));
+      sessions = sessions.filter(s => s.date >= start && s.date <= end);
+    } else if (attViewMode === 'month') {
+      const monthPrefix = `${attAnchorDate.getFullYear()}-${String(attAnchorDate.getMonth() + 1).padStart(2, '0')}`;
+      sessions = sessions.filter(s => s.date.startsWith(monthPrefix));
+    } else if (attViewMode === 'day') {
+      const targetDay = toISODateString(attAnchorDate);
+      sessions = sessions.filter(s => s.date === targetDay);
+    } else if (attViewMode === 'custom') {
+      sessions = sessions.filter(s => {
+        if (attCustomFromDate && s.date < attCustomFromDate) return false;
+        if (attCustomToDate && s.date > attCustomToDate) return false;
+        return true;
+      });
+    }
+
+    sessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const rows = participants.map(participant => {
+      let presentCount = 0;
+      const statuses = sessions.map(session => {
+        const rawStatus = session.records ? session.records[participant.id] : null;
+        if (rawStatus === 'present') {
+          presentCount++;
+          return 'Present';
+        }
+        if (rawStatus === 'absent') return 'Absent';
+        return 'Not Recorded';
+      });
+
+      return {
+        participant,
+        statuses,
+        summary: sessions.length ? `${presentCount}/${sessions.length} (${Math.round((presentCount / sessions.length) * 100)}%)` : '0/0 (0%)'
+      };
+    });
+
+    return { prog, participants, sessions, rows };
+  }
+
+  function openAttendanceExportDialog() {
+    const exportModal = document.getElementById('attExportModal');
+    const exportMessage = document.getElementById('attExportModalMessage');
+    const whatsappBtn = document.getElementById('attCopyWhatsAppBtn');
+    const data = getVisibleAttendanceMatrixData();
+
+    if (!data || data.participants.length === 0 || data.sessions.length === 0) {
+      showAlertDialog('Nothing to Export', 'The currently visible attendance table has no exportable rows.');
+      return;
+    }
+
+    if (exportMessage) {
+      exportMessage.textContent = `Export ${data.participants.length} participants and ${data.sessions.length} visible session${data.sessions.length === 1 ? '' : 's'}.`;
+    }
+
+    if (whatsappBtn) {
+      whatsappBtn.hidden = data.sessions.length !== 1;
+    }
+
+    if (!exportModal) return;
+
+    exportModal.inert = false;
+    exportModal.classList.add('active');
+    exportModal.removeAttribute('aria-hidden');
+  }
+
+  function closeAttendanceExportDialog() {
+    const exportModal = document.getElementById('attExportModal');
+    if (!exportModal) return;
+    if (document.activeElement && exportModal.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+    exportModal.classList.remove('active');
+    exportModal.setAttribute('aria-hidden', 'true');
+    exportModal.inert = true;
+  }
+
+  function sanitizeFilenamePart(value) {
+    return String(value || 'attendance')
+      .trim()
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase() || 'attendance';
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function inlineComputedStyles(source, target) {
+    const computed = window.getComputedStyle(source);
+    const properties = [
+      'background-color', 'border', 'border-collapse', 'border-color', 'border-spacing',
+      'border-style', 'border-width', 'box-sizing', 'color', 'display', 'font-family',
+      'font-size', 'font-weight', 'height', 'letter-spacing', 'line-height', 'margin',
+      'padding', 'text-align', 'text-transform', 'vertical-align', 'white-space', 'width'
+    ];
+    properties.forEach(prop => {
+      target.style.setProperty(prop, computed.getPropertyValue(prop));
+    });
+    target.style.position = 'static';
+    target.style.zIndex = 'auto';
+
+    Array.from(source.children).forEach((child, index) => {
+      if (target.children[index]) inlineComputedStyles(child, target.children[index]);
+    });
+  }
+
+  async function exportVisibleAttendanceAsJpg() {
+    const table = document.querySelector('#attMatrixTableContainer .att-table');
+    const data = getVisibleAttendanceMatrixData();
+    if (!table || !data) {
+      showAlertDialog('Nothing to Export', 'The attendance table is not available yet.');
+      return;
+    }
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const thEls = Array.from(table.querySelectorAll('thead th'));
+    const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+    const columnWidths = thEls.map(th => Math.ceil(th.getBoundingClientRect().width));
+    const rowHeights = bodyRows.map(row => Math.ceil(row.getBoundingClientRect().height));
+    const headerHeight = Math.ceil(table.querySelector('thead tr').getBoundingClientRect().height);
+    const width = Math.max(table.scrollWidth, columnWidths.reduce((sum, w) => sum + w, 0));
+    const height = headerHeight + rowHeights.reduce((sum, h) => sum + h, 0);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    const surface = rootStyles.getPropertyValue('--surface').trim() || '#ffffff';
+    const surfaceWarm = rootStyles.getPropertyValue('--surface-warm').trim() || '#f4f4f4';
+    const border = rootStyles.getPropertyValue('--border-soft').trim() || '#dddddd';
+    const borderStrong = rootStyles.getPropertyValue('--border').trim() || '#cccccc';
+    const fg = rootStyles.getPropertyValue('--fg').trim() || '#1f1f1f';
+    const muted = rootStyles.getPropertyValue('--muted').trim() || '#6f6f6f';
+    const presentColor = rootStyles.getPropertyValue('--success').trim() || '#12b981';
+    const absentColor = rootStyles.getPropertyValue('--danger').trim() || '#ef4444';
+    const fontFamily = rootStyles.getPropertyValue('--font-body').trim() || 'Arial, sans-serif';
+
+    ctx.fillStyle = surface;
+    ctx.fillRect(0, 0, width, height);
+
+    const drawCell = (x, y, w, h, fill, stroke = border) => {
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, w, h);
+    };
+
+    const drawText = (text, x, y, maxWidth, options = {}) => {
+      ctx.fillStyle = options.color || fg;
+      ctx.font = `${options.weight || 600} ${options.size || 14}px ${fontFamily}`;
+      ctx.textAlign = options.align || 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y, maxWidth);
+    };
+
+    let x = 0;
+    const headerLabels = [
+      `Attendee (${data.participants.length})`,
+      ...data.sessions.map(session => formatDateLabel(session.date)),
+      'Attendance Summary'
+    ];
+    headerLabels.forEach((label, index) => {
+      const w = columnWidths[index] || 120;
+      drawCell(x, 0, w, headerHeight, surfaceWarm, borderStrong);
+      drawText(label.toUpperCase(), x + (index === 0 ? 16 : w / 2), headerHeight / 2 - (index > 0 && index < headerLabels.length - 1 ? 10 : 0), w - 24, {
+        align: index === 0 ? 'left' : 'center',
+        size: 13,
+        weight: 700
+      });
+      if (index > 0 && index < headerLabels.length - 1) {
+        drawText('✎    ✕', x + w / 2, headerHeight / 2 + 18, w - 24, { color: muted, size: 15, weight: 600 });
+      }
+      x += w;
+    });
+
+    let y = headerHeight;
+    data.rows.forEach((row, rowIndex) => {
+      const h = rowHeights[rowIndex] || 52;
+      x = 0;
+
+      drawCell(x, y, columnWidths[0] || 220, h, surface);
+      drawText(row.participant.name, x + 16, y + h / 2, (columnWidths[0] || 220) - 24, { align: 'left', size: 14, weight: 600 });
+      x += columnWidths[0] || 220;
+
+      row.statuses.forEach((status, statusIndex) => {
+        const w = columnWidths[statusIndex + 1] || 110;
+        drawCell(x, y, w, h, surface);
+        if (status === 'Present' || status === 'Absent') {
+          ctx.beginPath();
+          ctx.arc(x + w / 2, y + h / 2, 8, 0, Math.PI * 2);
+          ctx.fillStyle = status === 'Present' ? presentColor : absentColor;
+          ctx.fill();
+        } else {
+          drawText('-', x + w / 2, y + h / 2, w - 24, { color: muted, size: 14, weight: 600 });
+        }
+        x += w;
+      });
+
+      const summaryW = columnWidths[columnWidths.length - 1] || 150;
+      drawCell(x, y, summaryW, h, surface);
+      const pillW = Math.min(summaryW - 20, 118);
+      const pillH = 26;
+      const pillX = x + (summaryW - pillW) / 2;
+      const pillY = y + (h - pillH) / 2;
+      ctx.fillStyle = surfaceWarm;
+      ctx.strokeStyle = border;
+      ctx.beginPath();
+      ctx.roundRect(pillX, pillY, pillW, pillH, 13);
+      ctx.fill();
+      ctx.stroke();
+      drawText(row.summary, x + summaryW / 2, y + h / 2, pillW - 12, { size: 12, weight: 700 });
+      y += h;
+    });
+
+    canvas.toBlob(blob => {
+      if (!blob) {
+        showAlertDialog('Export Failed', 'Could not create the JPG export.');
+        return;
+      }
+      const filename = `${sanitizeFilenamePart(data.prog.name)}-attendance.jpg`;
+      downloadBlob(blob, filename);
+      showToast('JPG export downloaded');
+    }, 'image/jpeg', 0.95);
+  }
+
+  function escapeXml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  function columnName(index) {
+    let name = '';
+    let n = index + 1;
+    while (n > 0) {
+      const remainder = (n - 1) % 26;
+      name = String.fromCharCode(65 + remainder) + name;
+      n = Math.floor((n - 1) / 26);
+    }
+    return name;
+  }
+
+  function createSheetXml(data) {
+    const header = ['Attendee', ...data.sessions.map(s => formatDateLabel(s.date)), 'Attendance Summary'];
+    const rows = [header, ...data.rows.map(row => [row.participant.name, ...row.statuses, row.summary])];
+    const sheetRows = rows.map((row, rowIndex) => {
+      const cells = row.map((value, colIndex) => {
+        const ref = `${columnName(colIndex)}${rowIndex + 1}`;
+        return `<c r="${ref}" t="inlineStr"><is><t>${escapeXml(value)}</t></is></c>`;
+      }).join('');
+      return `<row r="${rowIndex + 1}">${cells}</row>`;
+    }).join('');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`;
+  }
+
+  function crc32(bytes) {
+    if (!crc32.table) {
+      crc32.table = Array.from({ length: 256 }, (_, n) => {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        return c >>> 0;
+      });
+    }
+    let crc = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) {
+      crc = crc32.table[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function uint16(value) {
+    return [value & 0xff, (value >>> 8) & 0xff];
+  }
+
+  function uint32(value) {
+    return [value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff];
+  }
+
+  function concatBytes(parts) {
+    const total = parts.reduce((sum, part) => sum + part.length, 0);
+    const output = new Uint8Array(total);
+    let offset = 0;
+    parts.forEach(part => {
+      output.set(part, offset);
+      offset += part.length;
+    });
+    return output;
+  }
+
+  function createZip(files) {
+    const encoder = new TextEncoder();
+    const localParts = [];
+    const centralParts = [];
+    let offset = 0;
+
+    files.forEach(file => {
+      const nameBytes = encoder.encode(file.name);
+      const dataBytes = encoder.encode(file.content);
+      const crc = crc32(dataBytes);
+
+      const localHeader = new Uint8Array([
+        ...uint32(0x04034b50), ...uint16(20), ...uint16(0x0800), ...uint16(0),
+        ...uint16(0), ...uint16(0), ...uint32(crc), ...uint32(dataBytes.length),
+        ...uint32(dataBytes.length), ...uint16(nameBytes.length), ...uint16(0)
+      ]);
+      localParts.push(localHeader, nameBytes, dataBytes);
+
+      const centralHeader = new Uint8Array([
+        ...uint32(0x02014b50), ...uint16(20), ...uint16(20), ...uint16(0x0800),
+        ...uint16(0), ...uint16(0), ...uint16(0), ...uint32(crc),
+        ...uint32(dataBytes.length), ...uint32(dataBytes.length), ...uint16(nameBytes.length),
+        ...uint16(0), ...uint16(0), ...uint16(0), ...uint16(0), ...uint32(0),
+        ...uint32(offset)
+      ]);
+      centralParts.push(centralHeader, nameBytes);
+      offset += localHeader.length + nameBytes.length + dataBytes.length;
+    });
+
+    const localData = concatBytes(localParts);
+    const centralData = concatBytes(centralParts);
+    const endRecord = new Uint8Array([
+      ...uint32(0x06054b50), ...uint16(0), ...uint16(0), ...uint16(files.length),
+      ...uint16(files.length), ...uint32(centralData.length), ...uint32(localData.length),
+      ...uint16(0)
+    ]);
+
+    return concatBytes([localData, centralData, endRecord]);
+  }
+
+  function exportVisibleAttendanceAsXlsx() {
+    const data = getVisibleAttendanceMatrixData();
+    if (!data || data.participants.length === 0 || data.sessions.length === 0) {
+      showAlertDialog('Nothing to Export', 'The currently visible attendance table has no exportable rows.');
+      return;
+    }
+
+    const files = [
+      {
+        name: '[Content_Types].xml',
+        content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'
+      },
+      {
+        name: '_rels/.rels',
+        content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'
+      },
+      {
+        name: 'xl/workbook.xml',
+        content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Attendance" sheetId="1" r:id="rId1"/></sheets></workbook>'
+      },
+      {
+        name: 'xl/_rels/workbook.xml.rels',
+        content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'
+      },
+      {
+        name: 'xl/worksheets/sheet1.xml',
+        content: createSheetXml(data)
+      }
+    ];
+
+    const zipBytes = createZip(files);
+    const blob = new Blob([zipBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    downloadBlob(blob, `${sanitizeFilenamePart(data.prog.name)}-attendance.xlsx`);
+    showToast('XLSX export downloaded');
+  }
+
+  function formatFullDateLabel(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const year = parseInt(parts[0], 10);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${day} ${months[monthIndex]} ${year}`;
+  }
+
+  function buildVisibleAttendanceWhatsAppMessage(data) {
+    const session = data.sessions[0];
+    const lines = [
+      `The attendance for ${data.prog.name} for ${formatFullDateLabel(session.date)} is as follows`,
+      ''
+    ];
+
+    data.rows.forEach(row => {
+      const status = row.statuses[0] === 'Present' ? '🟢 Present' : row.statuses[0] === 'Absent' ? '🔴 Absent' : 'Not Recorded';
+      lines.push(`${row.participant.name}  ${status}`);
+    });
+
+    return lines.join('\n');
+  }
+
+  function copyTextToClipboard(text, successMessage) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => showToast(successMessage));
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    showToast(successMessage);
+  }
+
+  function copyVisibleAttendanceWhatsAppMessage() {
+    const data = getVisibleAttendanceMatrixData();
+    if (!data || data.sessions.length !== 1) {
+      showAlertDialog('Single Date Required', 'Filter the table to one visible attendance date before copying a WhatsApp message.');
+      return;
+    }
+
+    copyTextToClipboard(buildVisibleAttendanceWhatsAppMessage(data), 'WhatsApp attendance copied');
   }
 
   function deleteAttendanceSession(date) {
@@ -2028,6 +2473,52 @@
       matrixSearchInput.addEventListener('input', (e) => {
         attMatrixSearchQuery = e.target.value;
         renderAttMatrixTable();
+      });
+    }
+
+    const exportMatrixBtn = document.getElementById('attExportMatrixBtn');
+    if (exportMatrixBtn) {
+      exportMatrixBtn.addEventListener('click', openAttendanceExportDialog);
+    }
+
+    const exportModal = document.getElementById('attExportModal');
+    if (exportModal) {
+      exportModal.addEventListener('click', (e) => {
+        if (e.target === exportModal) closeAttendanceExportDialog();
+      });
+    }
+
+    const cancelExportBtn = document.getElementById('attCancelExportBtn');
+    if (cancelExportBtn) {
+      cancelExportBtn.addEventListener('click', closeAttendanceExportDialog);
+    }
+
+    const exportJpgBtn = document.getElementById('attExportJpgBtn');
+    if (exportJpgBtn) {
+      exportJpgBtn.addEventListener('click', async () => {
+        closeAttendanceExportDialog();
+        try {
+          await exportVisibleAttendanceAsJpg();
+        } catch (error) {
+          console.error(error);
+          showAlertDialog('Export Failed', 'Could not create the JPG export.');
+        }
+      });
+    }
+
+    const exportXlsxBtn = document.getElementById('attExportXlsxBtn');
+    if (exportXlsxBtn) {
+      exportXlsxBtn.addEventListener('click', () => {
+        closeAttendanceExportDialog();
+        exportVisibleAttendanceAsXlsx();
+      });
+    }
+
+    const copyWhatsAppBtn = document.getElementById('attCopyWhatsAppBtn');
+    if (copyWhatsAppBtn) {
+      copyWhatsAppBtn.addEventListener('click', () => {
+        closeAttendanceExportDialog();
+        copyVisibleAttendanceWhatsAppMessage();
       });
     }
 
