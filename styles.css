@@ -1312,10 +1312,10 @@ input:checked + .slider:before {
   max-width: 580px;
 }
 
-/* App Grid & Tile Cards */
+/* Minimal Pinterest App Tiles */
 .apps-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-6);
 }
@@ -1324,10 +1324,10 @@ input:checked + .slider:before {
   background-color: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
-  padding: var(--space-5);
+  padding: var(--space-4) var(--space-5);
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
   position: relative;
   transition: transform var(--motion-fast) var(--ease-standard), 
               border-color var(--motion-fast) var(--ease-standard), 
@@ -1343,104 +1343,97 @@ input:checked + .slider:before {
   background-color: var(--surface-warm);
   border-color: var(--accent);
   box-shadow: var(--elev-raised);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
 .disabled-app-tile {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.tile-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-.tile-brand-icon {
-  font-size: 28px;
+.tile-icon-wrapper {
+  width: 50px;
+  height: 50px;
   background-color: var(--bg);
-  width: 48px;
-  height: 48px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-soft);
+  flex-shrink: 0;
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
-.main-app-tile:hover .tile-brand-icon {
-  transform: scale(1.1) rotate(6deg);
+.tile-icon {
+  font-size: 26px;
 }
 
-.tile-status-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
+.main-app-tile:hover .tile-icon-wrapper {
+  transform: scale(1.08) rotate(4deg);
 }
 
-.badge-active {
-  background-color: var(--accent);
-  color: #ffffff;
+.tile-title-group {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.badge-coming {
-  background-color: var(--bg);
-  color: var(--muted);
-  border: 1px solid var(--border-soft);
-}
-
-.tile-body h3 {
+.tile-title-group h3 {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: 700;
   color: var(--fg);
-  margin-bottom: 2px;
+  line-height: 1.3;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tile-sub {
-  display: block;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--accent);
-  margin-bottom: var(--space-3);
-}
-
-.tile-body p {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  line-height: 1.5;
-  margin-bottom: var(--space-4);
-}
-
-.tile-footer {
-  border-top: 1px solid var(--border-soft);
-  padding-top: var(--space-3);
-  margin-top: auto;
-}
-
-.tile-btn-action {
-  font-size: var(--text-xs);
+.tile-badge-soon {
+  font-size: 10px;
   font-weight: 700;
-  color: var(--accent);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: gap var(--motion-fast) var(--ease-standard);
-}
-
-.main-app-tile:hover .tile-btn-action {
-  gap: 8px;
-}
-
-.tile-btn-disabled {
-  font-size: var(--text-xs);
-  font-weight: 600;
   color: var(--muted);
+  background-color: var(--bg);
+  border: 1px solid var(--border-soft);
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tile-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background-color: rgba(230, 0, 35, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
+}
+
+.tile-arrow svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.main-app-tile:hover .tile-arrow {
+  background-color: var(--accent);
+}
+
+.main-app-tile:hover .tile-arrow svg {
+  stroke: #ffffff;
+  transform: translateX(2px);
 }
 
 /* Back to Dashboard Button */
