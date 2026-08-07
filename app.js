@@ -835,8 +835,13 @@
       cancelConfirmBtn.style.display = cancelText ? 'inline-flex' : 'none';
 
       const cleanup = () => {
+        if (document.activeElement && confirmModal.contains(document.activeElement)) {
+          document.activeElement.blur();
+        }
         confirmModal.classList.remove('active');
         confirmModal.setAttribute('aria-hidden', 'true');
+        confirmModal.inert = true;
+
         okConfirmBtn.removeEventListener('click', onConfirm);
         cancelConfirmBtn.removeEventListener('click', onCancel);
         confirmModal.removeEventListener('click', onOverlayClick);
@@ -863,8 +868,13 @@
       cancelConfirmBtn.addEventListener('click', onCancel);
       confirmModal.addEventListener('click', onOverlayClick);
 
+      confirmModal.inert = false;
       confirmModal.classList.add('active');
-      confirmModal.setAttribute('aria-hidden', 'false');
+      confirmModal.removeAttribute('aria-hidden');
+
+      setTimeout(() => {
+        okConfirmBtn.focus();
+      }, 50);
     });
   }
 
@@ -1232,14 +1242,19 @@
       subSuffix.value = '';
     }
 
+    subjectModal.inert = false;
     subjectModal.classList.add('active');
-    subjectModal.setAttribute('aria-hidden', 'false');
+    subjectModal.removeAttribute('aria-hidden');
     subName.focus();
   }
 
   function closeSubjectModal() {
+    if (document.activeElement && subjectModal.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
     subjectModal.classList.remove('active');
     subjectModal.setAttribute('aria-hidden', 'true');
+    subjectModal.inert = true;
   }
 
   function saveModalSubject() {
