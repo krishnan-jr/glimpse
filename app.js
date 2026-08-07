@@ -244,6 +244,7 @@
     if (!isSecretPresetTriggered) {
       loadStateFromStorage();
     }
+    loadAttendanceDataFromStorage();
     applyRandomTitleEmojiOnRefresh();
     applyRandomDayEmojiOnRefresh();
     setupDatePicker();
@@ -251,10 +252,27 @@
     setupTabNavigation();
     setupPWA();
     setupEventListeners();
+    setupAttendanceEventListeners();
     
     // Apply timetable for selected date
     applyTimetableForDate(selectedDate);
     renderAll();
+
+    // SPA Router Setup & Route Restoration on refresh / load
+    let currentHash = window.location.hash;
+    if (!currentHash || currentHash === '#' || currentHash === '#/') {
+      try {
+        const savedRoute = localStorage.getItem('glimpse_last_active_route_v1');
+        if (savedRoute && savedRoute !== '#/dashboard' && savedRoute !== '#') {
+          currentHash = savedRoute;
+          window.history.replaceState(null, '', savedRoute);
+        }
+      } catch (e) {}
+    }
+
+    if (currentHash) {
+      handleRoute(currentHash);
+    }
   }
 
   // --- LOCAL STORAGE HELPERS ---
@@ -754,6 +772,9 @@
           renderWhatsAppPreview();
           updateTimeStamp();
         }
+
+        const subName = targetTab.replace('tab-', '');
+        navigateToRoute('#/glimpse/' + subName);
       });
     });
   }
@@ -761,19 +782,151 @@
   // --- APP VIEWS ROUTER & DASHBOARD PORTAL ---
   const viewDashboard = document.getElementById('view-dashboard');
   const viewGlimpseApp = document.getElementById('view-glimpse-app');
+  const viewAttendanceApp = document.getElementById('view-attendance-app');
   const tileGlimpseApp = document.getElementById('tileGlimpseApp');
+  const tileAttendanceApp = document.getElementById('tileAttendanceApp');
   const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+  const attBackToDashboardBtn = document.getElementById('attBackToDashboardBtn');
+
+  let isNavigatingFromRouter = false;
+
+  function navigateToRoute(routeHash, pushState = true) {
+    if (pushState && window.location.hash !== routeHash) {
+      window.history.pushState(null, '', routeHash);
+    }
+    try {
+      localStorage.setItem('glimpse_last_active_route_v1', routeHash);
+    } catch (e) {}
+  }
+
+  function parseHash(hashStr) {
+    let hash = hashStr || window.location.hash || '';
+    if (hash.startsWith('#')) hash = hash.substring(1);
+    if (hash.startsWith('/')) hash = hash.substring(1);
+
+    const parts = hash.split('?');
+    const path = parts[0] || 'dashboard';
+    const params = new URLSearchParams(parts[1] || '');
+
+    return { path, params };
+  }
+
+  function handleRoute(hashStr) {
+    if (isAttRecordSessionDirty() && !isCheckingDirtyNavigation) {
+      isCheckingDirtyNavigation = true;
+      const targetHash = hashStr;
+      confirmUnsavedAttendanceChanges().then(confirmed => {
+        isCheckingDirtyNavigation = false;
+        if (confirmed) {
+          attRecordInitialDate = null;
+          attRecordInitialRoster = null;
+          handleRoute(targetHash);
+        } else {
+          // Re-sync address bar hash to keep user on record screen
+          if (attCurrentActiveProgramId) {
+            const currentRoute = attEditingSessionDate 
+              ? `#/attendance/record?id=${attCurrentActiveProgramId}&date=${attEditingSessionDate}`
+              : `#/attendance/record?id=${attCurrentActiveProgramId}`;
+            window.history.pushState(null, '', currentRoute);
+          }
+        }
+      });
+      return;
+    }
+
+    isNavigatingFromRouter = true;
+    const { path, params } = parseHash(hashStr);
+
+    if (path.toUpperCase().includes('2G')) {
+      loadPreset2G();
+      isNavigatingFromRouter = false;
+      return;
+    }
+
+    if (path.startsWith('glimpse')) {
+      if (viewDashboard) viewDashboard.classList.remove('active');
+      if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
+
+      const sub = path.split('/')[1];
+      if (sub) {
+        const tabMap = { 'entry': 'tab-entry', 'subjects': 'tab-subjects', 'timetable': 'tab-timetable', 'preview': 'tab-preview' };
+        const targetTab = tabMap[sub] || ('tab-' + sub);
+        const tabBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
+        if (tabBtn) {
+          const tabBtns = document.querySelectorAll('.tab-btn');
+          const tabPanes = document.querySelectorAll('.tab-pane');
+          tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+          tabPanes.forEach(p => p.classList.remove('active'));
+          tabBtn.classList.add('active');
+          tabBtn.setAttribute('aria-selected', 'true');
+          const pane = document.getElementById(targetTab);
+          if (pane) pane.classList.add('active');
+        }
+      }
+    } else if (path.startsWith('attendance')) {
+      if (viewDashboard) viewDashboard.classList.remove('active');
+      if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+      if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
+
+      const sub = path.split('/')[1] || 'programs';
+      const progId = params.get('id');
+
+      if (sub === 'program-form') {
+        openProgramForm(progId, false);
+      } else if (sub === 'matrix') {
+        if (progId) {
+          openProgramMatrix(progId, false);
+        } else {
+          showAttScreen('att-screen-programs');
+          renderAttProgramsList();
+        }
+      } else if (sub === 'record') {
+        if (progId) {
+          attCurrentActiveProgramId = progId;
+          const dateParam = params.get('date');
+          openRecordSession(dateParam, false);
+        } else {
+          showAttScreen('att-screen-programs');
+          renderAttProgramsList();
+        }
+      } else {
+        showAttScreen('att-screen-programs');
+        renderAttProgramsList();
+      }
+    } else {
+      if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+      if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewDashboard) viewDashboard.classList.add('active');
+    }
+
+    isNavigatingFromRouter = false;
+  }
 
   function openGlimpseApp() {
     if (viewDashboard) viewDashboard.classList.remove('active');
+    if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateToRoute('#/glimpse');
+  }
+
+  function openAttendanceApp() {
+    if (viewDashboard) viewDashboard.classList.remove('active');
+    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showAttScreen('att-screen-programs');
+    renderAttProgramsList();
+    navigateToRoute('#/attendance');
   }
 
   function openDashboard() {
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewDashboard) viewDashboard.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateToRoute('#/dashboard');
   }
 
   function setupViewNavigation() {
@@ -797,6 +950,1142 @@
     themeToggleBtns.forEach(btn => {
       btn.addEventListener('click', toggleTheme);
     });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ATTENDANCE MODULE ENGINE
+  // Helper to generate 100+ sample participants & 100+ session date records for prog_sample_1
+  function generateSample100Data(participantCount = 105, sessionCount = 100) {
+    const firstNames = [
+      'Aarav', 'Ananya', 'Aditya', 'Avani', 'Arjun', 'Bhavya', 'Chetan', 'Devansh',
+      'Divya', 'Esha', 'Farhan', 'Gautam', 'Harini', 'Ishita', 'Jai', 'Kavya',
+      'Karan', 'Lakshmi', 'Manav', 'Meera', 'Nikhil', 'Neha', 'Om', 'Pooja',
+      'Parth', 'Rohan', 'Riya', 'Siddharth', 'Shreya', 'Tushar', 'Tanya', 'Utkarsh',
+      'Varun', 'Vidya', 'Yash', 'Zoya', 'Alex', 'Bella', 'Charlie', 'Daniel',
+      'Emma', 'Felix', 'Grace', 'Hannah', 'Ian', 'Julia', 'Kevin', 'Liam'
+    ];
+    
+    const lastNames = [
+      'Sharma', 'Patel', 'Kumar', 'Verma', 'Nair', 'Gupta', 'Joshi', 'Khan',
+      'Singh', 'Reddy', 'Chowdhury', 'Iyer', 'Deshmukh', 'Mehta', 'Rao', 'Bhat'
+    ];
+
+    const participants = [];
+    for (let i = 1; i <= participantCount; i++) {
+      const fn = firstNames[(i - 1) % firstNames.length];
+      const ln = lastNames[Math.floor((i - 1) / firstNames.length) % lastNames.length];
+      participants.push({
+        id: `part_${i}`,
+        name: `${fn} ${ln}`
+      });
+    }
+
+    const sessions = [];
+    const startDate = new Date('2026-04-29');
+    for (let s = 0; s < sessionCount; s++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + s);
+      const dateStr = d.toISOString().split('T')[0];
+
+      const records = {};
+      participants.forEach((p, idx) => {
+        const isAbsent = (idx + s * 7) % 9 === 0;
+        records[p.id] = isAbsent ? 'absent' : 'present';
+      });
+
+      sessions.push({
+        id: `sess_${s + 1}`,
+        date: dateStr,
+        records: records
+      });
+    }
+
+    return {
+      programs: [
+        {
+          id: 'prog_sample_1',
+          name: 'Class 2G - Main Roster',
+          description: `Daily classroom attendance (${participantCount} Students, ${sessionCount} Sessions)`,
+          createdAt: new Date().toISOString(),
+          participants: participants,
+          sessions: sessions
+        }
+      ]
+    };
+  }
+
+  const DEFAULT_ATTENDANCE_DATA = generateSample100Data();
+
+  let attendanceData = { programs: [] };
+  let attCurrentActiveProgramId = null;
+  let attFormEditingProgramId = null;
+  let attFormParticipantsDraft = [];
+  let attEditingSessionDate = null;
+  let attRecordRosterDraft = {};
+  let attMatrixSearchQuery = '';
+  var attRecordSearchQuery = '';
+  let attRecordInitialDate = null;
+  let attRecordInitialRoster = null;
+  let isCheckingDirtyNavigation = false;
+
+  function isAttRecordSessionDirty() {
+    const activeScreen = document.querySelector('.att-screen.active');
+    if (!activeScreen || activeScreen.id !== 'att-screen-record-session') return false;
+
+    const dateInput = document.getElementById('attSessionDate');
+    const currentDate = dateInput ? dateInput.value : '';
+    if (attRecordInitialDate !== null && currentDate !== attRecordInitialDate) return true;
+
+    if (!attRecordInitialRoster || !attRecordRosterDraft) return false;
+
+    const keys = Object.keys(attRecordRosterDraft);
+    for (let id of keys) {
+      if (attRecordRosterDraft[id] !== attRecordInitialRoster[id]) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function confirmUnsavedAttendanceChanges() {
+    if (!isAttRecordSessionDirty()) {
+      return Promise.resolve(true);
+    }
+
+    return showConfirmDialog({
+      title: 'Unsaved Attendance Changes',
+      message: 'You have unsaved attendance changes. Are you sure you want to discard your changes and continue?',
+      confirmText: 'Discard & Continue',
+      cancelText: 'Stay on Page',
+      isDanger: true
+    });
+  }
+  let attViewMode = 'week'; // 'week' | 'month' | 'day' | 'custom'
+  let attAnchorDate = new Date(); // Current date anchor for date range calculations
+
+  function get30DaysAgoISOString() {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  let attCustomFromDate = get30DaysAgoISOString();
+  let attCustomToDate = getTodayISOString();
+
+  // --- DATE RANGE HELPERS FOR MATRIX FILTERING ---
+  function getStartOfWeek(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Monday as 1st day
+    return new Date(date.setDate(diff));
+  }
+
+  function getEndOfWeek(d) {
+    const start = getStartOfWeek(d);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return end;
+  }
+
+  function formatShortDate(d) {
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const m = months[d.getMonth()];
+    const y = d.getFullYear();
+    return `${day} ${m} ${y}`;
+  }
+
+  function formatMonthYear(d) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  function toISODateString(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function updateDateFilterUI() {
+    const rangeLabel = document.getElementById('attDateRangeLabel');
+    const dateInput = document.getElementById('attDateNavInput');
+    const customWrapper = document.getElementById('attCustomDateWrapper');
+    const customFromInput = document.getElementById('attCustomFromInput');
+    const customToInput = document.getElementById('attCustomToInput');
+    const prevBtn = document.getElementById('attDateNavPrevBtn');
+    const nextBtn = document.getElementById('attDateNavNextBtn');
+
+    const resetDateFilterBtn = document.getElementById('attResetDateFilterBtn');
+    const isTodayAnchor = toISODateString(attAnchorDate) === getTodayISOString();
+    if (resetDateFilterBtn) {
+      if (attViewMode === 'custom') {
+        resetDateFilterBtn.style.display = 'none';
+      } else {
+        resetDateFilterBtn.style.display = '';
+        if (isTodayAnchor) {
+          resetDateFilterBtn.classList.add('active');
+        } else {
+          resetDateFilterBtn.classList.remove('active');
+        }
+      }
+    }
+
+    const segmentedBtns = document.querySelectorAll('.segmented-btn');
+    segmentedBtns.forEach(btn => {
+      const mode = btn.getAttribute('data-mode');
+      if (mode === attViewMode) {
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+      } else {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      }
+    });
+
+    if (attViewMode === 'day') {
+      if (prevBtn) prevBtn.style.display = 'inline-flex';
+      if (nextBtn) nextBtn.style.display = 'inline-flex';
+      if (rangeLabel) rangeLabel.style.display = 'none';
+      if (customWrapper) customWrapper.style.display = 'none';
+      if (dateInput) {
+        dateInput.style.display = 'inline-block';
+        dateInput.value = toISODateString(attAnchorDate);
+      }
+    } else if (attViewMode === 'custom') {
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
+      if (rangeLabel) rangeLabel.style.display = 'none';
+      if (dateInput) dateInput.style.display = 'none';
+      if (customWrapper) customWrapper.style.display = 'inline-flex';
+      if (customFromInput) customFromInput.value = attCustomFromDate;
+      if (customToInput) customToInput.value = attCustomToDate;
+    } else {
+      if (prevBtn) prevBtn.style.display = 'inline-flex';
+      if (nextBtn) nextBtn.style.display = 'inline-flex';
+      if (dateInput) dateInput.style.display = 'none';
+      if (customWrapper) customWrapper.style.display = 'none';
+      if (rangeLabel) {
+        rangeLabel.style.display = 'inline-block';
+        if (attViewMode === 'week') {
+          const start = getStartOfWeek(attAnchorDate);
+          const end = getEndOfWeek(attAnchorDate);
+          rangeLabel.textContent = `${formatShortDate(start)} - ${formatShortDate(end)}`;
+        } else if (attViewMode === 'month') {
+          rangeLabel.textContent = formatMonthYear(attAnchorDate);
+        }
+      }
+    }
+  }
+
+  function handleDateNav(direction) {
+    const current = new Date(attAnchorDate);
+
+    if (attViewMode === 'day') {
+      current.setDate(current.getDate() + direction);
+    } else if (attViewMode === 'week') {
+      current.setDate(current.getDate() + (direction * 7));
+    } else if (attViewMode === 'month') {
+      current.setMonth(current.getMonth() + direction);
+    }
+
+    attAnchorDate = current;
+    updateDateFilterUI();
+    renderAttMatrixTable();
+  }
+
+  // Console Helper for Manual Developer Testing
+  window.seedTestData = function(count = 105, sessionCount = 100) {
+    const sample = generateSample100Data(count, sessionCount);
+    const newProg = sample.programs[0];
+
+    let data = { programs: [] };
+    try {
+      const saved = localStorage.getItem('glimpse_attendance_data_v1');
+      if (saved) data = JSON.parse(saved);
+    } catch (e) {}
+
+    let prog = data.programs.find(p => p.id === 'prog_sample_1');
+    if (!prog) {
+      data.programs.unshift(newProg);
+    } else {
+      prog.participants = newProg.participants;
+      prog.sessions = newProg.sessions;
+      prog.description = `Daily classroom attendance (${newProg.participants.length} Students, ${newProg.sessions.length} Sessions)`;
+    }
+
+    localStorage.setItem('glimpse_attendance_data_v1', JSON.stringify(data));
+    attendanceData = data;
+
+    if (attCurrentActiveProgramId === 'prog_sample_1') {
+      renderAttMatrixTable();
+    } else {
+      renderAttProgramsList();
+    }
+
+    showToast(`Seeded ${newProg.participants.length} participants & ${newProg.sessions.length} sessions! 🚀`);
+    console.log(`✅ Seeded ${newProg.participants.length} participants and ${newProg.sessions.length} attendance sessions for prog_sample_1 into Local Storage.`);
+    return `Seeded ${newProg.participants.length} participants & ${newProg.sessions.length} sessions for prog_sample_1 in Local Storage.`;
+  };
+
+  // Storage Handlers
+  function loadAttendanceDataFromStorage() {
+    try {
+      const saved = localStorage.getItem('glimpse_attendance_data_v1');
+      if (saved) {
+        attendanceData = JSON.parse(saved);
+        if (!attendanceData.programs) attendanceData.programs = [];
+
+        // Auto-upgrade sample program 1 to 105+ participants & 100+ sessions if outdated
+        const sampleProg = attendanceData.programs.find(p => p.id === 'prog_sample_1');
+        if (sampleProg && (!sampleProg.sessions || sampleProg.sessions.length < 50 || !sampleProg.participants || sampleProg.participants.length < 50)) {
+          const freshData = generateSample100Data();
+          sampleProg.participants = freshData.programs[0].participants;
+          sampleProg.sessions = freshData.programs[0].sessions;
+          sampleProg.description = `Daily classroom attendance (${freshData.programs[0].participants.length} Students, ${freshData.programs[0].sessions.length} Sessions)`;
+          saveAttendanceDataToStorage();
+        }
+      } else {
+        attendanceData = generateSample100Data();
+        saveAttendanceDataToStorage();
+      }
+    } catch (e) {
+      console.error('Error loading attendance data:', e);
+      attendanceData = generateSample100Data();
+    }
+  }
+
+  function saveAttendanceDataToStorage() {
+    try {
+      localStorage.setItem('glimpse_attendance_data_v1', JSON.stringify(attendanceData));
+    } catch (e) {
+      console.error('Error saving attendance data:', e);
+    }
+  }
+
+  // Attendance Screens Navigation Router
+  function showAttScreen(screenId) {
+    const screens = document.querySelectorAll('.att-screen');
+    screens.forEach(s => s.classList.remove('active'));
+
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) targetScreen.classList.add('active');
+
+    const backTextEl = document.getElementById('attBackBtnText');
+    if (backTextEl) {
+      if (screenId === 'att-screen-programs') {
+        backTextEl.textContent = 'Dashboard';
+      } else if (screenId === 'att-screen-program-form' || screenId === 'att-screen-matrix') {
+        backTextEl.textContent = 'Programs';
+      } else if (screenId === 'att-screen-record-session') {
+        backTextEl.textContent = 'Matrix';
+      }
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // --- SCREEN 1: PROGRAM MANAGEMENT (LIST) ---
+  function renderAttProgramsList() {
+    const container = document.getElementById('attProgramsList');
+    if (!container) return;
+
+    if (!attendanceData.programs || attendanceData.programs.length === 0) {
+      container.innerHTML = `
+        <div class="att-empty-state">
+          <div class="att-empty-icon">📁</div>
+          <h3>No Programs Found</h3>
+          <p>Create your first program to start tracking attendance for your class or group.</p>
+          <button id="attEmptyCreateBtn" class="btn btn-primary btn-sm">+ Create Program</button>
+        </div>
+      `;
+      const emptyBtn = document.getElementById('attEmptyCreateBtn');
+      if (emptyBtn) emptyBtn.addEventListener('click', () => openProgramForm(null));
+      return;
+    }
+
+    container.innerHTML = attendanceData.programs.map(prog => {
+      const pCount = prog.participants ? prog.participants.length : 0;
+      const sCount = prog.sessions ? prog.sessions.length : 0;
+      
+      let lastDateText = 'No sessions yet';
+      if (sCount > 0) {
+        const sortedSessions = [...prog.sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+        lastDateText = 'Last: ' + formatDateLabel(sortedSessions[0].date);
+      }
+
+      return `
+        <div class="att-program-card" data-program-id="${prog.id}">
+          <div class="att-card-header">
+            <div class="att-card-title-group">
+              <h3>${escapeHtml(prog.name)}</h3>
+              ${prog.description ? `<div class="att-card-subtitle">${escapeHtml(prog.description)}</div>` : ''}
+            </div>
+          </div>
+
+          <div class="att-card-stats">
+            <span class="att-stat-badge">👥 ${pCount} ${pCount === 1 ? 'Participant' : 'Participants'}</span>
+            <span class="att-stat-badge">📅 ${sCount} ${sCount === 1 ? 'Session' : 'Sessions'}</span>
+            <span class="att-stat-badge">🕒 ${lastDateText}</span>
+          </div>
+
+          <div class="att-card-actions">
+            <button class="btn btn-primary btn-sm att-open-prog-btn" data-id="${prog.id}">Open</button>
+            <button class="btn btn-subtle btn-sm att-edit-prog-btn" data-id="${prog.id}">✎ Edit</button>
+            <button class="btn btn-subtle btn-sm att-delete-prog-btn" data-id="${prog.id}" style="color: var(--danger);">✕ Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach event listeners
+    container.querySelectorAll('.att-open-prog-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        openProgramMatrix(id);
+      });
+    });
+
+    container.querySelectorAll('.att-edit-prog-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        openProgramForm(id);
+      });
+    });
+
+    container.querySelectorAll('.att-delete-prog-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        deleteProgram(id);
+      });
+    });
+  }
+
+  function deleteProgram(programId) {
+    const prog = attendanceData.programs.find(p => p.id === programId);
+    if (!prog) return;
+
+    showConfirmDialog({
+      title: 'Delete Program',
+      message: `Are you sure you want to delete "${prog.name}" and all of its attendance records? This action cannot be undone.`,
+      confirmText: 'Delete Program',
+      cancelText: 'Cancel',
+      isDanger: true
+    }).then(confirmed => {
+      if (confirmed) {
+        attendanceData.programs = attendanceData.programs.filter(p => p.id !== programId);
+        saveAttendanceDataToStorage();
+        renderAttProgramsList();
+        showToast('Program deleted');
+      }
+    });
+  }
+
+  // --- SCREEN 2: CREATE / EDIT PROGRAM & PARTICIPANTS ---
+  function openProgramForm(programId = null, updateHash = true) {
+    if (updateHash) {
+      navigateToRoute(programId ? `#/attendance/program-form?id=${programId}` : '#/attendance/program-form');
+    }
+    attFormEditingProgramId = programId;
+    const titleEl = document.getElementById('attProgramFormTitle');
+    const nameInput = document.getElementById('attProgName');
+    const descInput = document.getElementById('attProgDesc');
+    const editIdInput = document.getElementById('attEditProgramId');
+
+    if (editIdInput) editIdInput.value = programId || '';
+
+    if (programId) {
+      const prog = attendanceData.programs.find(p => p.id === programId);
+      if (prog) {
+        if (titleEl) titleEl.textContent = 'Edit Program';
+        if (nameInput) nameInput.value = prog.name || '';
+        if (descInput) descInput.value = prog.description || '';
+        attFormParticipantsDraft = prog.participants ? JSON.parse(JSON.stringify(prog.participants)) : [];
+      }
+    } else {
+      if (titleEl) titleEl.textContent = 'Create New Program';
+      if (nameInput) nameInput.value = '';
+      if (descInput) descInput.value = '';
+      attFormParticipantsDraft = [];
+    }
+
+    renderAttFormParticipants();
+    showAttScreen('att-screen-program-form');
+  }
+
+  function renderAttFormParticipants() {
+    const badgeEl = document.getElementById('attParticipantCountBadge');
+    if (badgeEl) badgeEl.textContent = attFormParticipantsDraft.length;
+
+    const container = document.getElementById('attParticipantsList');
+    if (!container) return;
+
+    if (attFormParticipantsDraft.length === 0) {
+      container.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 12px; font-size: var(--text-xs);">No participants added yet. Enter full name above to build your roster.</div>`;
+      return;
+    }
+
+    container.innerHTML = attFormParticipantsDraft.map((p, index) => {
+      return `
+        <div class="att-participant-item" data-id="${p.id}">
+          <span class="name-text">${index + 1}. ${escapeHtml(p.name)}</span>
+          <div class="item-actions">
+            <button type="button" class="action-icon-btn edit-participant-btn" data-id="${p.id}" title="Edit Name">✎</button>
+            <button type="button" class="action-icon-btn delete delete-participant-btn" data-id="${p.id}" title="Remove Participant">✕</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.edit-participant-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        const p = attFormParticipantsDraft.find(item => item.id === id);
+        if (p) {
+          const newName = await showPromptDialog({
+            title: 'Edit Participant Name',
+            message: 'Enter updated participant name:',
+            defaultValue: p.name,
+            confirmText: 'Save Name',
+            cancelText: 'Cancel'
+          });
+          if (newName && newName.trim() !== '') {
+            p.name = newName.trim();
+            renderAttFormParticipants();
+          }
+        }
+      });
+    });
+
+    container.querySelectorAll('.delete-participant-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        attFormParticipantsDraft = attFormParticipantsDraft.filter(item => item.id !== id);
+        renderAttFormParticipants();
+      });
+    });
+  }
+
+  function handleAddParticipantFromInput() {
+    const input = document.getElementById('attNewParticipantInput');
+    if (!input) return;
+
+    const val = input.value.trim();
+    if (!val) return;
+
+    const names = val.split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
+    names.forEach(name => {
+      attFormParticipantsDraft.push({
+        id: 'part_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        name: name
+      });
+    });
+
+    input.value = '';
+    input.focus();
+    renderAttFormParticipants();
+  }
+
+  function saveProgramForm(e) {
+    if (e) e.preventDefault();
+
+    const nameInput = document.getElementById('attProgName');
+    const descInput = document.getElementById('attProgDesc');
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const desc = descInput ? descInput.value.trim() : '';
+
+    if (!name) {
+      showToast('Please enter a program name');
+      return;
+    }
+
+    if (attFormEditingProgramId) {
+      const prog = attendanceData.programs.find(p => p.id === attFormEditingProgramId);
+      if (prog) {
+        prog.name = name;
+        prog.description = desc;
+        prog.participants = JSON.parse(JSON.stringify(attFormParticipantsDraft));
+      }
+    } else {
+      const newProgram = {
+        id: 'prog_' + Date.now(),
+        name: name,
+        description: desc,
+        createdAt: new Date().toISOString(),
+        participants: JSON.parse(JSON.stringify(attFormParticipantsDraft)),
+        sessions: []
+      };
+      attendanceData.programs.push(newProgram);
+    }
+
+    saveAttendanceDataToStorage();
+    showToast(attFormEditingProgramId ? 'Program updated!' : 'Program created!');
+    renderAttProgramsList();
+    showAttScreen('att-screen-programs');
+  }
+
+  // --- SCREEN 3: ATTENDANCE MATRIX DASHBOARD ---
+  function openProgramMatrix(programId, updateHash = true) {
+    if (updateHash) {
+      navigateToRoute(`#/attendance/matrix?id=${programId}`);
+    }
+    attCurrentActiveProgramId = programId;
+    attMatrixSearchQuery = '';
+    const searchInput = document.getElementById('attMatrixSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    renderAttMatrixTable();
+    showAttScreen('att-screen-matrix');
+  }
+
+  function renderAttMatrixTable() {
+    const prog = attendanceData.programs.find(p => p.id === attCurrentActiveProgramId);
+    if (!prog) {
+      showAttScreen('att-screen-programs');
+      return;
+    }
+
+    updateDateFilterUI();
+
+    const titleEl = document.getElementById('attMatrixProgramTitle');
+    const descEl = document.getElementById('attMatrixProgramDesc');
+    if (titleEl) titleEl.textContent = prog.name;
+    if (descEl) descEl.textContent = prog.description || 'Attendance matrix overview';
+
+    const container = document.getElementById('attMatrixTableContainer');
+    const statsSummary = document.getElementById('attMatrixStatsSummary');
+    if (!container) return;
+
+    // Filter participants by search query
+    let filteredParticipants = prog.participants || [];
+    if (attMatrixSearchQuery.trim() !== '') {
+      const q = attMatrixSearchQuery.toLowerCase().trim();
+      filteredParticipants = filteredParticipants.filter(p => p.name.toLowerCase().includes(q));
+    }
+
+    // Determine date range filter based on attViewMode and attAnchorDate
+    let sortedSessions = [...(prog.sessions || [])];
+
+    if (attViewMode === 'week') {
+      const start = toISODateString(getStartOfWeek(attAnchorDate));
+      const end = toISODateString(getEndOfWeek(attAnchorDate));
+      sortedSessions = sortedSessions.filter(s => s.date >= start && s.date <= end);
+    } else if (attViewMode === 'month') {
+      const year = attAnchorDate.getFullYear();
+      const month = String(attAnchorDate.getMonth() + 1).padStart(2, '0');
+      const monthPrefix = `${year}-${month}`;
+      sortedSessions = sortedSessions.filter(s => s.date.startsWith(monthPrefix));
+    } else if (attViewMode === 'day') {
+      const targetDay = toISODateString(attAnchorDate);
+      sortedSessions = sortedSessions.filter(s => s.date === targetDay);
+    } else if (attViewMode === 'custom') {
+      sortedSessions = sortedSessions.filter(s => {
+        if (attCustomFromDate && s.date < attCustomFromDate) return false;
+        if (attCustomToDate && s.date > attCustomToDate) return false;
+        return true;
+      });
+    }
+
+    // Sort filtered sessions chronologically by date
+    sortedSessions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (statsSummary) {
+      const totalSessionsCount = (prog.sessions || []).length;
+      statsSummary.textContent = `Participants: ${filteredParticipants.length} | Sessions in Range: ${sortedSessions.length} (Total Recorded: ${totalSessionsCount})`;
+    }
+
+    if (filteredParticipants.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 32px; color: var(--muted);">
+          ${prog.participants && prog.participants.length > 0 ? 'No participants match your search query.' : 'No participants in this program yet. Click Edit to add participants.'}
+        </div>
+      `;
+      return;
+    }
+
+    if (sortedSessions.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 32px; margin-bottom: 8px;">📅</div>
+          <div style="font-size: var(--text-sm); font-weight: 600; color: var(--fg); margin-bottom: 4px;">No Attendance Recorded for Selected Date Range</div>
+          <div style="font-size: var(--text-xs); color: var(--muted);">Use the arrow buttons above to change dates, or click <strong>+ Add Attendance</strong> to record a session.</div>
+        </div>
+      `;
+      return;
+    }
+
+    // Construct Matrix HTML
+    let tableHtml = `<table class="att-table">`;
+
+    // Header Row
+    tableHtml += `<thead><tr>`;
+    tableHtml += `<th class="col-participant">Participant (${filteredParticipants.length})</th>`;
+
+    sortedSessions.forEach(sess => {
+      tableHtml += `
+        <th class="col-date">
+          <div class="date-header-content">
+            <span>${formatDateLabel(sess.date)}</span>
+            <div class="date-header-actions">
+              <button class="action-icon-btn att-edit-sess-btn" data-date="${sess.date}" title="Edit Session">✎</button>
+              <button class="action-icon-btn delete att-delete-sess-btn" data-date="${sess.date}" title="Delete Session">✕</button>
+            </div>
+          </div>
+        </th>
+      `;
+    });
+
+    tableHtml += `<th class="col-summary">Attendance Summary</th>`;
+    tableHtml += `</tr></thead>`;
+
+    // Body Rows
+    tableHtml += `<tbody>`;
+    filteredParticipants.forEach(p => {
+      let presentCount = 0;
+
+      tableHtml += `<tr>`;
+      tableHtml += `<td class="cell-participant">${escapeHtml(p.name)}</td>`;
+
+      sortedSessions.forEach(sess => {
+        const record = sess.records ? sess.records[p.id] : null;
+        if (record === 'present') {
+          presentCount++;
+          tableHtml += `<td><span class="att-dot att-dot-present" title="Present"></span></td>`;
+        } else if (record === 'absent') {
+          tableHtml += `<td><span class="att-dot att-dot-absent" title="Absent"></span></td>`;
+        } else {
+          tableHtml += `<td><span class="att-dot-na" title="Not Recorded">—</span></td>`;
+        }
+      });
+
+      const totalSessions = sortedSessions.length;
+      let pct = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+      
+      tableHtml += `
+        <td>
+          <span class="summary-pill">${presentCount}/${totalSessions} (${pct}%)</span>
+        </td>
+      `;
+      tableHtml += `</tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+    container.innerHTML = tableHtml;
+
+    // Attach event listeners for session actions inside matrix table headers
+    container.querySelectorAll('.att-edit-sess-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const date = e.currentTarget.getAttribute('data-date');
+        openRecordSession(date);
+      });
+    });
+
+    container.querySelectorAll('.att-delete-sess-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const date = e.currentTarget.getAttribute('data-date');
+        deleteAttendanceSession(date);
+      });
+    });
+  }
+
+  function deleteAttendanceSession(date) {
+    const prog = attendanceData.programs.find(p => p.id === attCurrentActiveProgramId);
+    if (!prog) return;
+
+    showConfirmDialog({
+      title: 'Delete Attendance Session',
+      message: `Are you sure you want to delete the attendance session recorded for ${formatDateLabel(date)}?`,
+      confirmText: 'Delete Session',
+      cancelText: 'Cancel',
+      isDanger: true
+    }).then(confirmed => {
+      if (confirmed) {
+        prog.sessions = prog.sessions.filter(s => s.date !== date);
+        saveAttendanceDataToStorage();
+        renderAttMatrixTable();
+        showToast('Attendance session deleted');
+      }
+    });
+  }
+
+  // --- SCREEN 4: ADD / EDIT ATTENDANCE SESSION ---
+  function openRecordSession(sessionDate = null, updateHash = true) {
+    if (updateHash && attCurrentActiveProgramId) {
+      const route = sessionDate 
+        ? `#/attendance/record?id=${attCurrentActiveProgramId}&date=${sessionDate}`
+        : `#/attendance/record?id=${attCurrentActiveProgramId}`;
+      navigateToRoute(route);
+    }
+    attEditingSessionDate = sessionDate;
+    if (typeof attRecordSearchQuery === 'undefined') {
+      window.attRecordSearchQuery = '';
+    } else {
+      attRecordSearchQuery = '';
+    }
+
+    const prog = attendanceData.programs.find(p => p.id === attCurrentActiveProgramId);
+    if (!prog) return;
+
+    const titleEl = document.getElementById('attRecordSessionTitle');
+    const subtitleEl = document.getElementById('attRecordSessionSubtitle');
+    const dateInput = document.getElementById('attSessionDate');
+    const searchInput = document.getElementById('attRecordSearchInput');
+
+    if (searchInput) searchInput.value = '';
+
+    const todayStr = getTodayISOString();
+
+    if (sessionDate) {
+      if (titleEl) titleEl.textContent = 'Edit Attendance Session';
+      if (subtitleEl) subtitleEl.textContent = `Modify attendance status for ${formatDateLabel(sessionDate)}`;
+      if (dateInput) dateInput.value = sessionDate;
+
+      // Load existing records
+      const existingSession = prog.sessions ? prog.sessions.find(s => s.date === sessionDate) : null;
+      attRecordRosterDraft = {};
+      prog.participants.forEach(p => {
+        attRecordRosterDraft[p.id] = (existingSession && existingSession.records && existingSession.records[p.id]) ? existingSession.records[p.id] : 'present';
+      });
+    } else {
+      if (titleEl) titleEl.textContent = 'Add Attendance';
+      if (subtitleEl) subtitleEl.textContent = 'Mark each participant as Present or Absent';
+      if (dateInput) dateInput.value = todayStr;
+
+      // Requirement: All participants should be marked Present by default for a new attendance session.
+      attRecordRosterDraft = {};
+      prog.participants.forEach(p => {
+        attRecordRosterDraft[p.id] = 'present';
+      });
+    }
+
+    renderAttRecordRoster();
+    showAttScreen('att-screen-record-session');
+
+    // Save baseline state for unsaved changes protection
+    attRecordInitialDate = dateInput ? dateInput.value : '';
+    attRecordInitialRoster = JSON.parse(JSON.stringify(attRecordRosterDraft));
+  }
+
+  function renderAttRecordRoster() {
+    const prog = attendanceData.programs.find(p => p.id === attCurrentActiveProgramId);
+    const container = document.getElementById('attRecordRosterList');
+    if (!prog || !container) return;
+
+    let searchQ = (typeof attRecordSearchQuery !== 'undefined' && attRecordSearchQuery) ? attRecordSearchQuery : '';
+    let filtered = prog.participants || [];
+    if (searchQ.trim() !== '') {
+      const q = searchQ.toLowerCase().trim();
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--muted);">No participants found matching "${escapeHtml(searchQ)}".</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(p => {
+      const status = attRecordRosterDraft[p.id] || 'present';
+      const isPresent = status === 'present';
+
+      return `
+        <div class="att-record-item" data-id="${p.id}">
+          <span class="participant-name">${escapeHtml(p.name)}</span>
+          <button type="button" class="att-toggle-btn ${isPresent ? 'present' : 'absent'}" data-id="${p.id}">
+            <span class="dot-icon">${isPresent ? '🟢' : '🔴'}</span>
+            <span>${isPresent ? 'Present' : 'Absent'}</span>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.att-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        const current = attRecordRosterDraft[id] || 'present';
+        attRecordRosterDraft[id] = current === 'present' ? 'absent' : 'present';
+        renderAttRecordRoster();
+      });
+    });
+  }
+
+  function saveAttendanceSession() {
+    const prog = attendanceData.programs.find(p => p.id === attCurrentActiveProgramId);
+    if (!prog) return;
+
+    const dateInput = document.getElementById('attSessionDate');
+    const targetDate = dateInput ? dateInput.value : '';
+
+    if (!targetDate) {
+      showToast('Please select a valid date');
+      return;
+    }
+
+    if (!prog.sessions) prog.sessions = [];
+
+    // Check if session already exists for targetDate
+    const existingIndex = prog.sessions.findIndex(s => s.date === targetDate);
+
+    // Block duplicate sessions on the same day when creating a new session or selecting an existing date
+    if (existingIndex !== -1 && attEditingSessionDate !== targetDate) {
+      showAlertDialog(
+        'Attendance Already Recorded',
+        `An attendance session for ${formatDateLabel(targetDate)} has already been recorded in "${prog.name}". Duplicate entries on the same date are not allowed. Please select a different date or edit the existing session from the matrix.`
+      );
+      return;
+    }
+
+    if (existingIndex !== -1) {
+      // Overwrite/update existing session
+      prog.sessions[existingIndex].records = JSON.parse(JSON.stringify(attRecordRosterDraft));
+    } else {
+      // Create new session
+      prog.sessions.push({
+        id: 'sess_' + Date.now(),
+        date: targetDate,
+        records: JSON.parse(JSON.stringify(attRecordRosterDraft))
+      });
+    }
+
+    saveAttendanceDataToStorage();
+    showToast('Attendance saved!');
+
+    // Reset unsaved changes dirty baseline flags
+    attRecordInitialDate = null;
+    attRecordInitialRoster = null;
+
+    renderAttMatrixTable();
+    showAttScreen('att-screen-matrix');
+  }
+
+  // Helper Utility Functions for Dates
+  function getTodayISOString() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function formatDateLabel(dateStr) {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const monthIndex = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${day} ${months[monthIndex]}`;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return dateStr;
+  }
+
+  function handleAttMainBackClick() {
+    const activeScreen = document.querySelector('.att-screen.active');
+    const screenId = activeScreen ? activeScreen.id : 'att-screen-programs';
+
+    if (screenId === 'att-screen-programs') {
+      openDashboard();
+    } else if (screenId === 'att-screen-program-form' || screenId === 'att-screen-matrix') {
+      openAttendanceApp();
+    } else if (screenId === 'att-screen-record-session') {
+      confirmUnsavedAttendanceChanges().then(confirmed => {
+        if (confirmed) {
+          attRecordInitialDate = null;
+          attRecordInitialRoster = null;
+          if (attCurrentActiveProgramId) {
+            openProgramMatrix(attCurrentActiveProgramId);
+          } else {
+            openAttendanceApp();
+          }
+        }
+      });
+    } else {
+      openDashboard();
+    }
+  }
+
+  // --- ATTENDANCE EVENT LISTENERS SETUP ---
+  function setupAttendanceEventListeners() {
+    // Tile & Navigation
+    if (tileAttendanceApp) {
+      tileAttendanceApp.addEventListener('click', openAttendanceApp);
+    }
+
+    if (attBackToDashboardBtn) {
+      attBackToDashboardBtn.addEventListener('click', handleAttMainBackClick);
+    }
+
+    // Screen 1: Programs list
+    const createProgBtn = document.getElementById('attCreateProgramBtn');
+    if (createProgBtn) {
+      createProgBtn.addEventListener('click', () => openProgramForm(null));
+    }
+
+    // Screen 2: Program Form
+    const cancelFormBtn = document.getElementById('attCancelProgramFormBtn');
+    const cancelFormBtn2 = document.getElementById('attCancelProgramFormBtn2');
+    if (cancelFormBtn) cancelFormBtn.addEventListener('click', () => openAttendanceApp());
+    if (cancelFormBtn2) cancelFormBtn2.addEventListener('click', () => openAttendanceApp());
+
+    const addParticipantBtn = document.getElementById('attAddParticipantBtn');
+    if (addParticipantBtn) {
+      addParticipantBtn.addEventListener('click', handleAddParticipantFromInput);
+    }
+
+    const newParticipantInput = document.getElementById('attNewParticipantInput');
+    if (newParticipantInput) {
+      newParticipantInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAddParticipantFromInput();
+        }
+      });
+    }
+
+    const programForm = document.getElementById('attProgramForm');
+    if (programForm) {
+      programForm.addEventListener('submit', saveProgramForm);
+    }
+
+    // Screen 3: Matrix Dashboard & Date Filtering Controls
+    const segmentedBtns = document.querySelectorAll('.segmented-btn');
+    segmentedBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-mode');
+        if (mode) {
+          attViewMode = mode;
+          updateDateFilterUI();
+          renderAttMatrixTable();
+        }
+      });
+    });
+
+    const prevDateBtn = document.getElementById('attDateNavPrevBtn');
+    if (prevDateBtn) {
+      prevDateBtn.addEventListener('click', () => handleDateNav(-1));
+    }
+
+    const nextDateBtn = document.getElementById('attDateNavNextBtn');
+    if (nextDateBtn) {
+      nextDateBtn.addEventListener('click', () => handleDateNav(1));
+    }
+
+    const dateNavInput = document.getElementById('attDateNavInput');
+    if (dateNavInput) {
+      dateNavInput.addEventListener('change', (e) => {
+        if (e.target.value) {
+          attAnchorDate = new Date(e.target.value + 'T00:00:00');
+          renderAttMatrixTable();
+        }
+      });
+    }
+
+    const customFromInput = document.getElementById('attCustomFromInput');
+    if (customFromInput) {
+      customFromInput.addEventListener('change', (e) => {
+        if (e.target.value) {
+          attCustomFromDate = e.target.value;
+          renderAttMatrixTable();
+        }
+      });
+    }
+
+    const customToInput = document.getElementById('attCustomToInput');
+    if (customToInput) {
+      customToInput.addEventListener('change', (e) => {
+        if (e.target.value) {
+          attCustomToDate = e.target.value;
+          renderAttMatrixTable();
+        }
+      });
+    }
+
+    const resetDateFilterBtn = document.getElementById('attResetDateFilterBtn');
+    if (resetDateFilterBtn) {
+      resetDateFilterBtn.addEventListener('click', () => {
+        attAnchorDate = new Date();
+        updateDateFilterUI();
+        renderAttMatrixTable();
+        showToast('Reset date filter to current date range');
+      });
+    }
+
+    const recordAttBtn = document.getElementById('attRecordAttendanceBtn');
+    if (recordAttBtn) {
+      recordAttBtn.addEventListener('click', () => openRecordSession(null));
+    }
+
+    const matrixSearchInput = document.getElementById('attMatrixSearchInput');
+    if (matrixSearchInput) {
+      matrixSearchInput.addEventListener('input', (e) => {
+        attMatrixSearchQuery = e.target.value;
+        renderAttMatrixTable();
+      });
+    }
+
+    // Screen 4: Record Attendance
+    const cancelRecordBtn2 = document.getElementById('attCancelRecordSessionBtn2');
+    if (cancelRecordBtn2) {
+      cancelRecordBtn2.addEventListener('click', () => {
+        confirmUnsavedAttendanceChanges().then(confirmed => {
+          if (confirmed) {
+            attRecordInitialDate = null;
+            attRecordInitialRoster = null;
+            if (attCurrentActiveProgramId) {
+              openProgramMatrix(attCurrentActiveProgramId);
+            } else {
+              showAttScreen('att-screen-matrix');
+            }
+          }
+        });
+      });
+    }
+
+    // Page Refresh / Tab Close Protection for Unsaved Attendance Changes
+    window.addEventListener('beforeunload', (e) => {
+      if (isAttRecordSessionDirty()) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved attendance changes. Do you want to continue?';
+        return e.returnValue;
+      }
+    });
+
+    const markAllPresentBtn = document.getElementById('attMarkAllPresentBtn');
+    if (markAllPresentBtn) {
+      markAllPresentBtn.addEventListener('click', () => {
+        Object.keys(attRecordRosterDraft).forEach(id => attRecordRosterDraft[id] = 'present');
+        renderAttRecordRoster();
+      });
+    }
+
+    const markAllAbsentBtn = document.getElementById('attMarkAllAbsentBtn');
+    if (markAllAbsentBtn) {
+      markAllAbsentBtn.addEventListener('click', () => {
+        Object.keys(attRecordRosterDraft).forEach(id => attRecordRosterDraft[id] = 'absent');
+        renderAttRecordRoster();
+      });
+    }
+
+    const recordSearchInput = document.getElementById('attRecordSearchInput');
+    if (recordSearchInput) {
+      recordSearchInput.addEventListener('input', (e) => {
+        attRecordSearchQuery = e.target.value;
+        renderAttRecordRoster();
+      });
+    }
+
+    const saveSessionBtn = document.getElementById('attSaveSessionBtn');
+    if (saveSessionBtn) {
+      saveSessionBtn.addEventListener('click', saveAttendanceSession);
+    }
   }
 
   // --- IN-APP CONFIRMATION & ALERT MODAL ENGINE ---
@@ -888,6 +2177,79 @@
     });
   }
 
+  function showPromptDialog(options = {}) {
+    return new Promise((resolve) => {
+      const {
+        title = 'Enter Input',
+        message = 'Please enter details:',
+        defaultValue = '',
+        confirmText = 'Save',
+        cancelText = 'Cancel'
+      } = options;
+
+      const promptModal = document.getElementById('promptModal');
+      const promptTitle = document.getElementById('promptTitle');
+      const promptMessage = document.getElementById('promptMessage');
+      const promptInput = document.getElementById('promptInput');
+      const promptForm = document.getElementById('promptForm');
+      const cancelPromptBtn = document.getElementById('cancelPromptBtn');
+      const okPromptBtn = document.getElementById('okPromptBtn');
+
+      if (!promptModal || !promptInput) {
+        const res = window.prompt(message, defaultValue);
+        resolve(res);
+        return;
+      }
+
+      if (promptTitle) promptTitle.textContent = title;
+      if (promptMessage) promptMessage.textContent = message;
+      if (promptInput) promptInput.value = defaultValue;
+      if (okPromptBtn) okPromptBtn.textContent = confirmText;
+      if (cancelPromptBtn) cancelPromptBtn.textContent = cancelText;
+
+      const cleanup = () => {
+        promptModal.classList.remove('active');
+        promptModal.setAttribute('aria-hidden', 'true');
+        promptModal.inert = true;
+        promptForm.removeEventListener('submit', onSubmit);
+        cancelPromptBtn.removeEventListener('click', onCancel);
+        promptModal.removeEventListener('click', onOverlayClick);
+      };
+
+      const onSubmit = (e) => {
+        e.preventDefault();
+        const val = promptInput.value.trim();
+        cleanup();
+        resolve(val);
+      };
+
+      const onCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      const onOverlayClick = (e) => {
+        if (e.target === promptModal) {
+          cleanup();
+          resolve(null);
+        }
+      };
+
+      promptForm.addEventListener('submit', onSubmit);
+      cancelPromptBtn.addEventListener('click', onCancel);
+      promptModal.addEventListener('click', onOverlayClick);
+
+      promptModal.inert = false;
+      promptModal.classList.add('active');
+      promptModal.removeAttribute('aria-hidden');
+
+      setTimeout(() => {
+        promptInput.focus();
+        promptInput.select();
+      }, 50);
+    });
+  }
+
   // --- EVENT LISTENERS ---
   function setupEventListeners() {
     setupViewNavigation();
@@ -897,12 +2259,18 @@
       themeToggleBtn.addEventListener('click', toggleTheme);
     }
 
-    // Hashchange listener for secret 2G route (#2G)
+    // Hashchange and popstate listener for SPA Router & Back button navigation
+    window.addEventListener('popstate', () => {
+      handleRoute(window.location.hash);
+    });
+
     window.addEventListener('hashchange', () => {
       if (checkUrlForSecretPreset()) {
         openGlimpseApp();
         applyTimetableForDate(selectedDate);
         renderAll();
+      } else {
+        handleRoute(window.location.hash);
       }
     });
 

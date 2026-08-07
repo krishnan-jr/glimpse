@@ -67,6 +67,19 @@
             </div>
           </div>
 
+          <!-- MAIN APP TILE: ATTENDANCE TRACKER -->
+          <div class="app-tile main-app-tile" id="tileAttendanceApp">
+            <div class="tile-icon-wrapper" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+              <span class="tile-icon">📋</span>
+            </div>
+            <div class="tile-title-group">
+              <h3>Attendance</h3>
+            </div>
+            <div class="tile-arrow">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+
           <!-- COMING SOON TILE: CLASSROOM UTILITIES -->
           <div class="app-tile disabled-app-tile" data-app-name="Classroom Utilities">
             <div class="tile-icon-wrapper">
@@ -268,6 +281,211 @@
       </main>
     </div>
 
+    <!-- VIEW 3: THE ATTENDANCE TRACKER APPLICATION -->
+    <div id="view-attendance-app" class="app-view">
+      
+      <!-- Top Header inside Attendance App -->
+      <header class="app-header">
+        <div class="header-left">
+          <button id="attBackToDashboardBtn" class="btn-back-dashboard" title="Back" aria-label="Back">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <span class="btn-back-text" id="attBackBtnText">Dashboard</span>
+          </button>
+          <div class="header-brand">
+            <span class="brand-icon">📋</span>
+            <div class="brand-text">
+              <h1 id="attHeaderTitle">Attendance Manager</h1>
+              <span class="subtitle" id="attHeaderSubtitle">Track & Manage Program Rosters</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">
+            <span class="theme-icon-span">
+              <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
+            </span>
+          </button>
+        </div>
+      </header>
+
+      <main class="content-area att-content-area">
+
+        <!-- SCREEN 1: PROGRAM MANAGEMENT (LIST) -->
+        <section id="att-screen-programs" class="att-screen active">
+          <div class="pane-header">
+            <div>
+              <h2>Programs & Batches</h2>
+              <p class="pane-desc">Select a program to view its attendance matrix or edit details.</p>
+            </div>
+            <button id="attCreateProgramBtn" class="btn btn-primary btn-sm">+ Create Program</button>
+          </div>
+
+          <div id="attProgramsList" class="att-programs-list">
+            <!-- Dynamically populated program cards -->
+          </div>
+        </section>
+
+        <!-- SCREEN 2: CREATE / EDIT PROGRAM & PARTICIPANTS -->
+        <section id="att-screen-program-form" class="att-screen">
+          <div class="pane-header">
+            <div>
+              <h2 id="attProgramFormTitle">Create New Program</h2>
+              <p class="pane-desc">Configure program details and manage participant roster.</p>
+            </div>
+          </div>
+
+          <form id="attProgramForm" class="att-form">
+            <input type="hidden" id="attEditProgramId" value="">
+            
+            <div class="form-group">
+              <label for="attProgName">Program Name *</label>
+              <input type="text" id="attProgName" class="input-control" placeholder="e.g. Class 2G Attendance, Robotics Workshop" required>
+            </div>
+
+            <div class="form-group">
+              <label for="attProgDesc">Description / Subtitle</label>
+              <input type="text" id="attProgDesc" class="input-control" placeholder="e.g. Daily Classroom Batch 2026">
+            </div>
+
+            <!-- Participants Roster Management -->
+            <div class="att-participants-section">
+              <div class="section-title-row">
+                <h3>Participants Roster (<span id="attParticipantCountBadge">0</span>)</h3>
+                <span class="section-hint">Add participants to this program</span>
+              </div>
+
+              <div class="add-participant-bar">
+                <input type="text" id="attNewParticipantInput" class="input-control" placeholder="Participant full name...">
+                <button type="button" id="attAddParticipantBtn" class="btn btn-secondary btn-sm">+ Add</button>
+              </div>
+
+              <div id="attParticipantsList" class="att-participants-list">
+                <!-- Dynamically rendered participant items with edit & delete -->
+              </div>
+            </div>
+
+            <div class="form-actions-row">
+              <button type="button" id="attCancelProgramFormBtn2" class="btn btn-subtle">Cancel</button>
+              <button type="submit" id="attSaveProgramBtn" class="btn btn-primary">Save Program</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- SCREEN 3: ATTENDANCE MATRIX DASHBOARD -->
+        <section id="att-screen-matrix" class="att-screen">
+          <div class="pane-header">
+            <div>
+              <h2 id="attMatrixProgramTitle">Program Attendance</h2>
+              <p id="attMatrixProgramDesc" class="pane-desc">Attendance matrix overview</p>
+            </div>
+            <div class="pane-actions">
+              <button id="attRecordAttendanceBtn" class="btn btn-primary btn-sm">+ Add Attendance</button>
+            </div>
+          </div>
+
+          <!-- Date Filtering Panel -->
+          <div class="att-filter-panel">
+            <!-- Row 1: View Mode on left, Today button on right -->
+            <div class="filter-panel-row filter-row-top">
+              <div class="filter-group-left">
+                <div class="view-mode-segmented" role="tablist" aria-label="View Mode">
+                  <button type="button" class="segmented-btn active" data-mode="week" role="tab" aria-selected="true">By Week</button>
+                  <button type="button" class="segmented-btn" data-mode="month" role="tab" aria-selected="false">By Month</button>
+                  <button type="button" class="segmented-btn" data-mode="day" role="tab" aria-selected="false">By Day</button>
+                  <button type="button" class="segmented-btn" data-mode="custom" role="tab" aria-selected="false">Custom</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 2: Date Selector centered in the middle -->
+            <div class="filter-panel-row filter-row-bottom">
+              <div id="attDateNavWrapper" class="date-nav-wrapper">
+                <button type="button" id="attDateNavPrevBtn" class="action-icon-btn nav-arrow-btn" title="Previous Date Range">&larr;</button>
+                
+                <div id="attDateNavDisplay" class="date-nav-display">
+                  <span id="attDateRangeLabel" class="date-range-text">Loading range...</span>
+                  <input type="date" id="attDateNavInput" class="input-control date-nav-input" style="display: none;">
+                  
+                  <!-- Custom Range Inputs (From / To) -->
+                  <div id="attCustomDateWrapper" class="custom-date-wrapper" style="display: none;">
+                    <span class="custom-date-label">From:</span>
+                    <input type="date" id="attCustomFromInput" class="input-control date-nav-input">
+                    <span class="custom-date-label">To:</span>
+                    <input type="date" id="attCustomToInput" class="input-control date-nav-input">
+                  </div>
+                </div>
+
+                <button type="button" id="attDateNavNextBtn" class="action-icon-btn nav-arrow-btn" title="Next Date Range">&rarr;</button>
+              </div>
+
+              <button type="button" id="attResetDateFilterBtn" class="action-icon-btn today-icon-btn" title="Reset to Today" aria-label="Reset to Today">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <circle cx="12" cy="15" r="1.5" fill="currentColor"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="att-matrix-controls">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="attMatrixSearchInput" class="input-control search-input" placeholder="Search participant...">
+            </div>
+            <div class="matrix-stats-summary" id="attMatrixStatsSummary">
+              <!-- Summary text -->
+            </div>
+          </div>
+
+          <div class="att-matrix-scroll-wrapper">
+            <div id="attMatrixTableContainer" class="att-matrix-container">
+              <!-- Dynamically rendered Attendance Matrix Table -->
+            </div>
+          </div>
+        </section>
+
+        <!-- SCREEN 4: ADD / EDIT ATTENDANCE SESSION -->
+        <section id="att-screen-record-session" class="att-screen">
+          <div class="pane-header">
+            <div>
+              <h2 id="attRecordSessionTitle">Add Attendance</h2>
+              <p class="pane-desc" id="attRecordSessionSubtitle">Mark each participant as Present or Absent</p>
+            </div>
+          </div>
+
+          <div class="att-session-config-bar">
+            <div class="meta-field">
+              <label for="attSessionDate">Attendance Date *</label>
+              <input type="date" id="attSessionDate" class="input-control">
+            </div>
+
+            <div class="quick-bulk-actions">
+              <span class="bulk-label">Quick Actions:</span>
+              <button type="button" id="attMarkAllPresentBtn" class="btn btn-subtle btn-xs">Mark All Present 🟢</button>
+              <button type="button" id="attMarkAllAbsentBtn" class="btn btn-subtle btn-xs">Mark All Absent 🔴</button>
+            </div>
+          </div>
+
+          <div class="att-session-search-bar">
+            <input type="text" id="attRecordSearchInput" class="input-control" placeholder="Search participant name...">
+          </div>
+
+          <div id="attRecordRosterList" class="att-record-roster-list">
+            <!-- Dynamically populated roster toggle items -->
+          </div>
+
+          <div class="form-actions-row">
+            <button type="button" id="attCancelRecordSessionBtn2" class="btn btn-subtle">Cancel</button>
+            <button type="button" id="attSaveSessionBtn" class="btn btn-primary btn-lg">Save Attendance</button>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
     <!-- App Footer -->
     <footer class="app-footer">
       <p>Made with ❤️</p>
@@ -365,6 +583,28 @@
           <button id="cancelConfirmBtn" class="btn btn-subtle">Cancel</button>
           <button id="okConfirmBtn" class="btn btn-primary">Confirm</button>
         </div>
+      </div>
+    </div>
+
+    <!-- In-App Custom Input Prompt Modal -->
+    <div id="promptModal" class="modal-overlay" inert aria-hidden="true">
+      <div class="confirm-modal-content">
+        <div class="confirm-modal-header">
+          <div class="confirm-icon-badge" style="background: rgba(230, 0, 35, 0.15); color: var(--accent);">
+            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </div>
+          <h3 id="promptTitle">Edit Participant Name</h3>
+        </div>
+        <form id="promptForm">
+          <div class="confirm-modal-body" style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+            <p id="promptMessage" style="font-size: var(--text-sm); color: var(--muted);">Enter participant name:</p>
+            <input type="text" id="promptInput" class="input-control" required style="width: 100%;">
+          </div>
+          <div class="confirm-modal-actions" style="margin-top: 16px;">
+            <button type="button" id="cancelPromptBtn" class="btn btn-subtle">Cancel</button>
+            <button type="submit" id="okPromptBtn" class="btn btn-primary">Save</button>
+          </div>
+        </form>
       </div>
     </div>
 
