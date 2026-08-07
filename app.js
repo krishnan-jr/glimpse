@@ -790,6 +790,85 @@
     });
   }
 
+  // --- IN-APP CONFIRMATION & ALERT MODAL ENGINE ---
+  const confirmModal = document.getElementById('confirmModal');
+  const confirmTitle = document.getElementById('confirmTitle');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
+  const okConfirmBtn = document.getElementById('okConfirmBtn');
+
+  function showConfirmDialog(options = {}) {
+    return new Promise((resolve) => {
+      const {
+        title = 'Confirm Action',
+        message = 'Are you sure you want to proceed?',
+        confirmText = 'Confirm',
+        cancelText = 'Cancel',
+        isDanger = true
+      } = options;
+
+      if (!confirmModal || !confirmTitle || !confirmMessage || !okConfirmBtn || !cancelConfirmBtn) {
+        resolve(window.confirm(message));
+        return;
+      }
+
+      confirmTitle.textContent = title;
+      confirmMessage.textContent = message;
+      okConfirmBtn.textContent = confirmText;
+      cancelConfirmBtn.textContent = cancelText;
+
+      if (isDanger) {
+        okConfirmBtn.className = 'btn btn-primary';
+      } else {
+        okConfirmBtn.className = 'btn btn-secondary';
+      }
+
+      cancelConfirmBtn.style.display = cancelText ? 'inline-flex' : 'none';
+
+      const cleanup = () => {
+        confirmModal.classList.remove('active');
+        confirmModal.setAttribute('aria-hidden', 'true');
+        okConfirmBtn.removeEventListener('click', onConfirm);
+        cancelConfirmBtn.removeEventListener('click', onCancel);
+        confirmModal.removeEventListener('click', onOverlayClick);
+      };
+
+      const onConfirm = () => {
+        cleanup();
+        resolve(true);
+      };
+
+      const onCancel = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      const onOverlayClick = (e) => {
+        if (e.target === confirmModal) {
+          cleanup();
+          resolve(false);
+        }
+      };
+
+      okConfirmBtn.addEventListener('click', onConfirm);
+      cancelConfirmBtn.addEventListener('click', onCancel);
+      confirmModal.addEventListener('click', onOverlayClick);
+
+      confirmModal.classList.add('active');
+      confirmModal.setAttribute('aria-hidden', 'false');
+    });
+  }
+
+  function showAlertDialog(title, message) {
+    return showConfirmDialog({
+      title: title || 'Notice',
+      message: message || '',
+      confirmText: 'OK',
+      cancelText: null,
+      isDanger: false
+    });
+  }
+
   // --- EVENT LISTENERS ---
   function setupEventListeners() {
     setupViewNavigation();
@@ -907,8 +986,14 @@
     });
 
     // Reset Timetable
-    resetTimetableBtn.addEventListener('click', () => {
-      if (confirm('Reset timetable schedule to original 8-period defaults?')) {
+    resetTimetableBtn.addEventListener('click', async () => {
+      const confirmed = await showConfirmDialog({
+        title: 'Reset Timetable',
+        message: 'Reset timetable schedule to original 8-period defaults?',
+        confirmText: 'Reset Schedule'
+      });
+
+      if (confirmed) {
         timetable = JSON.parse(JSON.stringify(DEFAULT_TIMETABLE));
         saveTimetableToStorage();
         applyTimetableForDate(selectedDate);
@@ -974,8 +1059,14 @@
     });
 
     // Clear Notes
-    clearNotesBtn.addEventListener('click', () => {
-      if (confirm('Are you sure you want to clear all notes for today?')) {
+    clearNotesBtn.addEventListener('click', async () => {
+      const confirmed = await showConfirmDialog({
+        title: 'Clear Today\'s Notes',
+        message: 'Are you sure you want to clear all notes for today?',
+        confirmText: 'Clear Notes'
+      });
+
+      if (confirmed) {
         for (let i = 0; i < 8; i++) {
           currentNotes[getSlotKey(i)] = '';
         }
@@ -987,7 +1078,7 @@
     });
 
     // Manager Actions Delegation
-    subjectsManagerListEl.addEventListener('click', (e) => {
+    subjectsManagerListEl.addEventListener('click', async (e) => {
       const moveUpBtn = e.target.closest('.move-up');
       const moveDownBtn = e.target.closest('.move-down');
       const editBtn = e.target.closest('.edit-sub');
@@ -1022,7 +1113,16 @@
 
       if (deleteBtn) {
         const subId = deleteBtn.getAttribute('data-id');
-        if (confirm('Delete this subject?')) {
+        const targetSub = subjects.find(s => s.id === subId);
+        const subName = targetSub ? targetSub.name : 'this subject';
+
+        const confirmed = await showConfirmDialog({
+          title: 'Delete Subject',
+          message: `Are you sure you want to delete ${subName}?`,
+          confirmText: 'Delete Subject'
+        });
+
+        if (confirmed) {
           subjects = subjects.filter(s => s.id !== subId);
           
           saveSubjectsToStorage();
@@ -1033,8 +1133,14 @@
     });
 
     // Reset Defaults
-    resetDefaultsBtn.addEventListener('click', () => {
-      if (confirm('Reset subjects and timetable to original defaults?')) {
+    resetDefaultsBtn.addEventListener('click', async () => {
+      const confirmed = await showConfirmDialog({
+        title: 'Reset All Defaults',
+        message: 'Reset subjects and timetable to original default settings?',
+        confirmText: 'Reset Defaults'
+      });
+
+      if (confirmed) {
         subjects = JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
         timetable = JSON.parse(JSON.stringify(DEFAULT_TIMETABLE));
         currentNotes = {};
@@ -1176,7 +1282,7 @@
       document.execCommand('copy');
       showToast('WhatsApp Message Copied! 📋');
     } catch (err) {
-      alert('Failed to copy message automatically. Please select text and copy manually.');
+      showAlertDialog('Copy Notice', 'Failed to copy message automatically. Please select text and copy manually.');
     }
     document.body.removeChild(textArea);
   }
