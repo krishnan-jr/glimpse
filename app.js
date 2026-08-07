@@ -201,11 +201,14 @@
     saveEnabledToStorage();
     saveSettingsToStorage();
 
-    openGlimpseApp();
+    try {
+      localStorage.setItem('glimpse_last_active_route_v1', '#/dashboard');
+    } catch (e) {}
 
-    setTimeout(() => {
-      showToast('Loaded Class Timetable & Subjects! 🏫');
-    }, 400);
+    // Navigate to homepage and reload webapp
+    const cleanUrl = window.location.origin + window.location.pathname + '#/dashboard';
+    window.location.href = cleanUrl;
+    window.location.reload();
   }
 
   function loadPresetENG() {
@@ -241,20 +244,14 @@
 
     saveAttendanceDataToStorage();
 
-    const viewDashboard = document.getElementById('view-dashboard');
-    const viewGlimpseApp = document.getElementById('view-glimpse-app');
-    const viewAttendanceApp = document.getElementById('view-attendance-app');
+    try {
+      localStorage.setItem('glimpse_last_active_route_v1', '#/dashboard');
+    } catch (e) {}
 
-    if (viewDashboard) viewDashboard.classList.remove('active');
-    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
-    if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    openProgramMatrix(engProgramId, true);
-
-    setTimeout(() => {
-      showToast('Loaded English Language Improvement Program! 🇬🇧');
-    }, 400);
+    // Navigate to homepage and reload webapp
+    const cleanUrl = window.location.origin + window.location.pathname + '#/dashboard';
+    window.location.href = cleanUrl;
+    window.location.reload();
   }
 
   function applyRandomTitleEmojiOnRefresh() {
