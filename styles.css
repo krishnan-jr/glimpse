@@ -1413,8 +1413,13 @@ input:checked + .slider:before {
 }
 
 .disabled-app-tile {
-  opacity: 0.5;
-  cursor: not-allowed;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.disabled-app-tile:hover {
+  opacity: 0.85;
+  background-color: var(--surface-warm);
 }
 
 .tile-icon-wrapper {

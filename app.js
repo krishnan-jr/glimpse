@@ -784,6 +784,15 @@
       backToDashboardBtn.addEventListener('click', openDashboard);
     }
 
+    // In-app alert for coming-soon tiles
+    const disabledTiles = document.querySelectorAll('.disabled-app-tile');
+    disabledTiles.forEach(tile => {
+      tile.addEventListener('click', () => {
+        const appName = tile.getAttribute('data-app-name') || 'This app';
+        showAlertDialog('Coming Soon 🚀', `${appName} is currently under development and will be available in an upcoming update!`);
+      });
+    });
+
     const themeToggleBtns = document.querySelectorAll('.theme-toggle-btn');
     themeToggleBtns.forEach(btn => {
       btn.addEventListener('click', toggleTheme);
