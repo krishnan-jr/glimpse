@@ -450,15 +450,23 @@
           </div>
 
           <div class="att-session-config-bar">
-            <div class="meta-field">
+            <div class="meta-field att-date-field">
               <label for="attSessionDate">Attendance Date *</label>
               <input type="date" id="attSessionDate" class="input-control">
             </div>
 
             <div class="quick-bulk-actions">
-              <span class="bulk-label">Quick Actions:</span>
-              <button type="button" id="attMarkAllPresentBtn" class="btn btn-subtle btn-xs">Mark All Present 🟢</button>
-              <button type="button" id="attMarkAllAbsentBtn" class="btn btn-subtle btn-xs">Mark All Absent 🔴</button>
+              <span class="bulk-label">Quick Actions</span>
+              <div class="bulk-buttons">
+                <button type="button" id="attMarkAllPresentBtn" class="btn btn-subtle">
+                  <span>Mark All Present</span>
+                  <span class="status-emoji">🟢</span>
+                </button>
+                <button type="button" id="attMarkAllAbsentBtn" class="btn btn-subtle">
+                  <span>Mark All Absent</span>
+                  <span class="status-emoji">🔴</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -712,6 +720,6 @@
 
   </div>
 
-  <script src="app.js?v=attendance-export-20260808-18"></script>
+  <script src="app.js?v=attendance-export-20260808-19"></script>
 </body>
 </html>
