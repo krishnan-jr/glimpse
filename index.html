@@ -22,7 +22,7 @@
   <!-- Favicon: Kite Emoji -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪁</text></svg>">
   
-  <link rel="stylesheet" href="styles.css?v=attendance-export-20260807-2">
+  <link rel="stylesheet" href="styles.css?v=attendance-export-20260808-4">
 </head>
 <body>
   <div class="app-container">
@@ -355,6 +355,7 @@
               </div>
 
               <div class="add-participant-bar">
+                <input type="text" id="attNewParticipantRollNo" class="input-control" placeholder="Roll No" style="width: 90px; flex-shrink: 0;">
                 <input type="text" id="attNewParticipantInput" class="input-control" placeholder="Attendee full name...">
                 <button type="button" id="attAddParticipantBtn" class="btn btn-secondary btn-sm">+ Add</button>
               </div>
@@ -494,7 +495,7 @@
 
     <!-- App Footer -->
     <footer class="app-footer">
-      <p>Made with ❤️</p>
+      <p id="madeWithLovePill">Made with ❤️</p>
     </footer>
 
     <!-- Modal for Adding / Editing Subject -->
@@ -614,6 +615,34 @@
       </div>
     </div>
 
+    <!-- Edit Attendee (Name & Roll No) Modal -->
+    <div id="attParticipantModal" class="modal-overlay" inert aria-hidden="true">
+      <div class="confirm-modal-content" style="max-width: 420px;">
+        <div class="confirm-modal-header">
+          <div class="confirm-icon-badge" style="background: rgba(230, 0, 35, 0.15); color: var(--accent);">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </div>
+          <h3>Edit Attendee Details</h3>
+        </div>
+        <form id="attParticipantForm">
+          <div class="confirm-modal-body" style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+            <div class="form-group" style="margin: 0;">
+              <label for="attEditParticipantRollNo" style="font-size: var(--text-xs); font-weight: 600; color: var(--fg); margin-bottom: 4px; display: block;">Roll Number</label>
+              <input type="text" id="attEditParticipantRollNo" class="input-control" placeholder="e.g. 101 or 1" required style="width: 100%;">
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label for="attEditParticipantName" style="font-size: var(--text-xs); font-weight: 600; color: var(--fg); margin-bottom: 4px; display: block;">Full Name</label>
+              <input type="text" id="attEditParticipantName" class="input-control" placeholder="Attendee full name" required style="width: 100%;">
+            </div>
+          </div>
+          <div class="confirm-modal-actions" style="margin-top: 20px;">
+            <button type="button" id="attCancelParticipantModalBtn" class="btn btn-subtle">Cancel</button>
+            <button type="submit" id="attSaveParticipantModalBtn" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Attendance Export Modal -->
     <div id="attExportModal" class="modal-overlay" inert aria-hidden="true">
       <div class="confirm-modal-content att-export-modal-content">
@@ -637,6 +666,36 @@
       </div>
     </div>
 
+    <!-- Secret Backup & Restore Modal -->
+    <div id="backupModal" class="modal-overlay" inert aria-hidden="true">
+      <div class="confirm-modal-content" style="max-width: 440px;">
+        <div class="confirm-modal-header">
+          <div class="confirm-icon-badge" style="background: rgba(18, 185, 129, 0.12); color: var(--success);">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>
+          </div>
+          <h3>Application Backup & Restore</h3>
+        </div>
+        <div class="confirm-modal-body" style="margin-top: 12px;">
+          <p style="font-size: var(--text-sm); color: var(--muted); margin-bottom: 16px; line-height: 1.5;">
+            Export all application data stored in <code>localStorage</code> as a JSON file, or restore your data by uploading a JSON backup.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button type="button" id="backupExportBtn" class="btn btn-primary" style="width: 100%; justify-content: center;">
+              📥 Export Backup (JSON)
+            </button>
+            <div style="border-top: 1px solid var(--border-soft); margin: 4px 0;"></div>
+            <button type="button" id="backupImportBtn" class="btn btn-secondary" style="width: 100%; justify-content: center; text-align: center;">
+              📤 Upload & Restore Backup (JSON)
+            </button>
+            <input type="file" id="backupImportFileInput" accept=".json,application/json" style="display: none;">
+          </div>
+        </div>
+        <div class="confirm-modal-actions" style="margin-top: 20px;">
+          <button type="button" id="closeBackupModalBtn" class="btn btn-subtle">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast-notification">
       <span id="toastMessage">Copied to clipboard!</span>
@@ -644,6 +703,6 @@
 
   </div>
 
-  <script src="app.js?v=attendance-export-20260807-2"></script>
+  <script src="app.js?v=attendance-export-20260808-5"></script>
 </body>
 </html>
