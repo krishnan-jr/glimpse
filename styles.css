@@ -1107,6 +1107,10 @@ input:checked + .slider:before {
 }
 
 /* In-App Custom Confirmation & Alert Dialog */
+#confirmModal {
+  z-index: 250;
+}
+
 .confirm-modal-content {
   background-color: var(--surface);
   border: 1px solid var(--border);
