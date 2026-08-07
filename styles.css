@@ -2356,16 +2356,24 @@ input:checked + .slider:before {
   color: var(--fg);
 }
 
-/* Record Attendance Screen Config Bar (Compact Layout) */
+/* Ultra-Compact Record Attendance Screen Layout */
+#att-screen-record-session .pane-header {
+  margin-bottom: 8px;
+}
+
+#att-screen-record-session .pane-desc {
+  margin-top: 1px;
+}
+
 .att-session-config-bar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   background: var(--surface);
-  padding: 10px 14px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
 }
 
 @media (min-width: 520px) {
@@ -2378,37 +2386,37 @@ input:checked + .slider:before {
 
 .att-session-config-bar .att-date-field {
   margin-bottom: 0;
-  min-width: 160px;
+  min-width: 150px;
   flex-shrink: 0;
 }
 
 .att-session-config-bar .att-date-field label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .att-session-config-bar .att-date-field input {
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 .quick-bulk-actions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 @media (min-width: 440px) {
   .quick-bulk-actions {
     flex-direction: row;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 }
 
 .bulk-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -2427,10 +2435,10 @@ input:checked + .slider:before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   white-space: nowrap;
-  padding: 5px 12px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
   font-weight: 600;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
@@ -2452,20 +2460,20 @@ input:checked + .slider:before {
 }
 
 .att-session-search-bar {
-  margin: 4px 0 8px 0;
+  margin: 2px 0 6px 0;
 }
 
 .att-session-search-bar input {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .att-record-roster-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: calc(100vh - 280px);
-  min-height: 440px;
+  gap: 4px;
+  max-height: calc(100vh - 210px);
+  min-height: 480px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -2477,7 +2485,7 @@ input:checked + .slider:before {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  padding: 5px 10px;
   transition: background var(--motion-fast);
 }
 
@@ -2487,7 +2495,7 @@ input:checked + .slider:before {
 
 .att-record-item .participant-name {
   font-weight: 600;
-  font-size: var(--text-sm);
+  font-size: 13px;
   color: var(--fg);
 }
 
