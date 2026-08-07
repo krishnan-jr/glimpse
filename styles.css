@@ -2498,8 +2498,8 @@ input:checked + .slider:before {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 3px 10px;
-  min-height: 32px;
+  padding: 6px 12px;
+  min-height: 38px;
   transition: background var(--motion-fast);
 }
 
