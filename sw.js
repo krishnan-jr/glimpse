@@ -1,8 +1,15 @@
-const CACHE_NAME = 'glimpse-pwa-v6';
+const CACHE_NAME = 'glimpse-pwa-v9';
 const ASSETS_TO_CACHE = [
   './',
   'index.html',
   'styles.css',
+  'js/constants.js',
+  'js/storage.js',
+  'js/dialogs.js',
+  'js/router.js',
+  'js/glimpse.js',
+  'js/attendance.js',
+  'js/user-groups.js',
   'app.js',
   'feelgood-messages.json',
   'manifest.json',

@@ -1800,6 +1800,88 @@ input:checked + .slider:before {
   gap: var(--space-2);
 }
 
+.ug-bulk-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.ug-bulk-textarea:focus {
+  border-color: var(--fg);
+  box-shadow: var(--focus-ring);
+}
+
+.btn-danger-subtle {
+  color: var(--danger) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+.btn-danger-subtle:hover {
+  background-color: rgba(239, 68, 68, 0.18) !important;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+}
+
+.att-roster-source-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.att-assigned-ug-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  background: rgba(230, 0, 35, 0.05);
+  border: 1px solid rgba(230, 0, 35, 0.2);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+}
+
+.att-assigned-ug-banner .assigned-ug-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.att-assigned-ug-banner .sync-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.att-ug-select-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard);
+}
+
+.att-ug-select-card:hover {
+  border-color: var(--fg);
+  background: var(--surface-hover);
+}
+
 .att-participants-list {
   display: flex;
   flex-direction: column;
