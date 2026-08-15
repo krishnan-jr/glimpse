@@ -344,7 +344,10 @@ body {
 /* Input Controls */
 .input-control {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 38px;
+  min-height: 38px;
   padding: 0 var(--space-3);
   font-size: var(--text-sm);
   font-family: var(--font-body);
@@ -354,12 +357,35 @@ body {
   border-radius: var(--radius-md);
   outline: none;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 .input-control:focus {
   border-color: var(--fg);
   box-shadow: var(--focus-ring);
+}
+
+/* Date input specific iOS Safari fixes */
+input[type="date"].input-control,
+input[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+  min-height: 1.2em;
 }
 
 /* Calendar Picker Indicator (Pinterest Red Accent) */
@@ -1850,11 +1876,17 @@ input:checked + .slider:before {
 
   .att-roster-source-actions {
     width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
   }
 
   .att-roster-source-actions .btn {
-    flex: 1;
+    width: 100%;
     justify-content: center;
+    padding: 6px 8px;
+    font-size: var(--text-xs);
+    white-space: nowrap;
   }
 }
 
@@ -2458,143 +2490,12 @@ input:checked + .slider:before {
   color: var(--fg);
 }
 
-/* Zero Outer Gaps Record Attendance Screen Layout */
-#att-screen-record-session .pane-header {
-  margin-bottom: 0;
-}
-
-#att-screen-record-session .pane-desc {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-.att-session-config-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: var(--surface);
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: 0;
-}
-
-@media (min-width: 520px) {
-  .att-session-config-bar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.att-session-config-bar .att-date-field {
-  margin-bottom: 0;
-  min-width: 0;
-  flex: 1 1 auto;
-  max-width: 100%;
-}
-
-.att-session-config-bar .att-date-field label {
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 3px;
-}
-
-.att-session-config-bar .att-date-field input {
-  padding: 6px 10px;
-  font-size: 13px;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.quick-bulk-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-@media (min-width: 440px) {
-  .quick-bulk-actions {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-  }
-}
-
-.bulk-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.bulk-buttons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.bulk-buttons .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  white-space: nowrap;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-  background: var(--surface-warm);
-  color: var(--fg);
-  transition: transform var(--motion-fast) var(--ease-standard),
-              background var(--motion-fast) var(--ease-standard),
-              border-color var(--motion-fast) var(--ease-standard);
-}
-
-.bulk-buttons .btn:hover {
-  background: var(--border-soft);
-  border-color: var(--border-hover, var(--border));
-  transform: translateY(-1px);
-}
-
-.bulk-buttons .btn:active {
-  transform: translateY(0);
-}
-
 .att-session-search-bar {
-  margin: 0;
+  margin-bottom: var(--space-2);
 }
 
 .att-session-search-bar input {
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.att-record-roster-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: calc(100vh - 290px);
-  min-height: 320px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-/* Sticky Footer Action Bar for Record Attendance Screen */
-#att-screen-record-session .form-actions-row {
-  position: sticky;
-  bottom: 0;
-  z-index: 50;
-  background: var(--bg);
-  padding: 12px 0 16px 0;
-  margin-top: 8px;
-  border-top: 1px solid var(--border-soft);
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.06);
+  width: 100%;
 }
 
 .att-record-item {
@@ -2604,8 +2505,9 @@ input:checked + .slider:before {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
-  min-height: 38px;
+  padding: 8px 12px;
+  min-height: 42px;
+  gap: var(--space-2);
   transition: background var(--motion-fast);
 }
 
@@ -2623,14 +2525,15 @@ input:checked + .slider:before {
 .att-toggle-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
+  gap: 6px;
+  padding: 5px 12px;
   border-radius: var(--radius-pill);
   font-size: 12px;
   font-weight: 700;
   border: none;
   cursor: pointer;
   transition: all var(--motion-fast) var(--ease-standard);
+  user-select: none;
 }
 
 .att-toggle-btn.present {

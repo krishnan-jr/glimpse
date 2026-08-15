@@ -488,39 +488,40 @@
             </div>
           </div>
 
-          <div class="att-session-config-bar">
-            <div class="meta-field att-date-field">
+          <form id="attRecordSessionForm" class="att-form" onsubmit="event.preventDefault();">
+            <div class="form-group">
               <label for="attSessionDate">Attendance Date *</label>
               <input type="date" id="attSessionDate" class="input-control">
             </div>
 
-            <div class="quick-bulk-actions">
-              <span class="bulk-label">Quick Actions</span>
-              <div class="bulk-buttons">
-                <button type="button" id="attMarkAllPresentBtn" class="btn btn-subtle">
-                  <span>Mark All Present</span>
-                  <span class="status-emoji">🟢</span>
-                </button>
-                <button type="button" id="attMarkAllAbsentBtn" class="btn btn-subtle">
-                  <span>Mark All Absent</span>
-                  <span class="status-emoji">🔴</span>
-                </button>
+            <!-- Attendees Attendance Roster Section -->
+            <div class="att-participants-section">
+              <div class="section-title-row" style="flex-wrap: wrap; gap: 8px;">
+                <h3>Attendees Roster (<span id="attRecordCountBadge">0</span>)</h3>
+                <div class="att-roster-source-actions">
+                  <button type="button" id="attMarkAllPresentBtn" class="btn btn-subtle btn-sm" title="Mark all attendees present">
+                    <span>🟢 Mark All Present</span>
+                  </button>
+                  <button type="button" id="attMarkAllAbsentBtn" class="btn btn-subtle btn-sm" title="Mark all attendees absent">
+                    <span>🔴 Mark All Absent</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="att-session-search-bar">
+                <input type="text" id="attRecordSearchInput" class="input-control" placeholder="Search participant name...">
+              </div>
+
+              <div id="attRecordRosterList" class="att-participants-list">
+                <!-- Dynamically populated roster toggle items -->
               </div>
             </div>
-          </div>
 
-          <div class="att-session-search-bar">
-            <input type="text" id="attRecordSearchInput" class="input-control" placeholder="Search participant name...">
-          </div>
-
-          <div id="attRecordRosterList" class="att-record-roster-list">
-            <!-- Dynamically populated roster toggle items -->
-          </div>
-
-          <div class="form-actions-row">
-            <button type="button" id="attCancelRecordSessionBtn2" class="btn btn-subtle">Cancel</button>
-            <button type="button" id="attSaveSessionBtn" class="btn btn-primary btn-lg">Save Attendance</button>
-          </div>
+            <div class="form-actions-row">
+              <button type="button" id="attCancelRecordSessionBtn2" class="btn btn-subtle">Cancel</button>
+              <button type="button" id="attSaveSessionBtn" class="btn btn-primary">Save Attendance</button>
+            </div>
+          </form>
         </section>
 
       </main>

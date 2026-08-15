@@ -1747,6 +1747,11 @@
     const container = document.getElementById('attRecordRosterList');
     if (!prog || !container) return;
 
+    const countBadge = document.getElementById('attRecordCountBadge');
+    if (countBadge) {
+      countBadge.textContent = Array.isArray(prog.participants) ? prog.participants.length : 0;
+    }
+
     let searchQ = attRecordSearchQuery || '';
     let filtered = prog.participants || [];
     if (searchQ.trim() !== '') {
