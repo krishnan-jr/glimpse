@@ -158,7 +158,7 @@
           window.attCurrentActiveProgramId = progId;
           const dateParam = params.get('date');
           if (typeof window.openRecordSession === 'function') {
-            window.openRecordSession(dateParam, false);
+            window.openRecordSession(dateParam, false, progId);
           }
         } else {
           if (typeof window.showAttScreen === 'function') window.showAttScreen('att-screen-programs');

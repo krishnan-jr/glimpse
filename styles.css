@@ -2489,8 +2489,9 @@ input:checked + .slider:before {
 
 .att-session-config-bar .att-date-field {
   margin-bottom: 0;
-  min-width: 160px;
-  flex-shrink: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 100%;
 }
 
 .att-session-config-bar .att-date-field label {
@@ -2502,6 +2503,9 @@ input:checked + .slider:before {
 .att-session-config-bar .att-date-field input {
   padding: 6px 10px;
   font-size: 13px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .quick-bulk-actions {

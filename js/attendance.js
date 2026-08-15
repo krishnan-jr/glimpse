@@ -1689,7 +1689,8 @@
   }
 
   // --- SCREEN 4: ADD / EDIT ATTENDANCE SESSION ---
-  function openRecordSession(sessionDate = null, updateHash = true) {
+  function openRecordSession(sessionDate = null, updateHash = true, programId = null) {
+    if (programId) attCurrentActiveProgramId = programId;
     if (updateHash && attCurrentActiveProgramId && typeof window.navigateToRoute === 'function') {
       const route = sessionDate 
         ? `#/attendance/record?id=${attCurrentActiveProgramId}&date=${sessionDate}`
