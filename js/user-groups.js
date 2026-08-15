@@ -606,6 +606,23 @@
         }
 
         saveUserGroupsDataToStorage();
+
+        // If any programs are assigned to this user group, sync participants & remap sessions
+        if (ugCurrentActiveGroupId && window.attendanceData && Array.isArray(window.attendanceData.programs)) {
+          let attChanged = false;
+          window.attendanceData.programs.forEach(prog => {
+            if (prog.assignedGroupId === ugCurrentActiveGroupId) {
+              if (typeof window.syncProgramWithAssignedGroup === 'function') {
+                window.syncProgramWithAssignedGroup(prog);
+                attChanged = true;
+              }
+            }
+          });
+          if (attChanged && typeof window.saveAttendanceDataToStorage === 'function') {
+            window.saveAttendanceDataToStorage();
+          }
+        }
+
         ugInitialFormSnapshot = null;
         if (typeof window.openUserGroupsApp === 'function') window.openUserGroupsApp();
       });

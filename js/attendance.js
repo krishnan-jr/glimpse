@@ -235,15 +235,216 @@
     }
   }
 
+  // --- ATTENDEE INTELLIGENT MATCHING & ATTENDANCE REMAPPING ENGINE ---
+
+  /**
+   * Normalizes participant name for comparison (lowercased, trimmed, stripped punctuation and leading numbers).
+   */
+  function normalizeAttendeeName(name) {
+    if (typeof name !== 'string') return '';
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/^\d+[\s\.\-_:]+\s*/, '')     // strip leading roll/index prefix like "1." or "01 -"
+      .replace(/[\(\)\[\]\{\}\.,_\-]+/g, ' ') // replace punctuation with spaces
+      .replace(/\s+/g, ' ')                  // normalize multiple spaces
+      .trim();
+  }
+
+  /**
+   * Checks if two names are fuzzy-matched (exact, prefix, extension, token containment, or spelling similarity).
+   * Handles cases like: "1 Anoop" -> "1 Anoop Krishnan", "Anoop K." -> "Anoop Krishnan".
+   */
+  function isNameFuzzyMatch(nameA, nameB) {
+    const normA = normalizeAttendeeName(nameA);
+    const normB = normalizeAttendeeName(nameB);
+
+    if (!normA || !normB) return false;
+    if (normA === normB) return true;
+
+    // Direct prefix / extension check (e.g. "Anoop" vs "Anoop Krishnan")
+    if (normA.startsWith(normB + ' ') || normB.startsWith(normA + ' ')) {
+      return true;
+    }
+
+    // Token containment: all words in shorter name appear in longer name in sequence
+    const tokensA = normA.split(' ').filter(Boolean);
+    const tokensB = normB.split(' ').filter(Boolean);
+
+    const shorter = tokensA.length <= tokensB.length ? tokensA : tokensB;
+    const longer = tokensA.length <= tokensB.length ? tokensB : tokensA;
+
+    if (shorter.length >= 1) {
+      // First word must match (e.g. "Anoop" matches "Anoop", not "Sarah")
+      const firstS = shorter[0];
+      const firstMatch = longer.some(w => w === firstS || (firstS.length >= 2 && (w.startsWith(firstS) || firstS.startsWith(w))));
+      if (!firstMatch) return false;
+
+      let lastIdx = -1;
+      let allFound = true;
+      for (const word of shorter) {
+        // A word matches if it is equal, or if one is a prefix of the other (including single-letter initials like "K" -> "Krishnan")
+        const foundIdx = longer.findIndex((w, idx) => idx > lastIdx && (w === word || w.startsWith(word) || word.startsWith(w)));
+        if (foundIdx === -1) {
+          allFound = false;
+          break;
+        }
+        lastIdx = foundIdx;
+      }
+      if (allFound) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Intelligently matches attendees between oldList and newList.
+   * Priority:
+   * 1. Exact Roll No + Exact Name
+   * 2. Exact Roll No + Fuzzy Name (e.g., Roll 1 "Anoop" -> Roll 1 "Anoop Krishnan")
+   * 3. Exact Name + Different Roll No
+   * 4. Fuzzy Name + Similar Roll No
+   * 
+   * Returns: { matches: Map<newId, oldParticipant>, matchedCount, unmatchedOldCount, unmatchedNewCount }
+   */
+  function matchAttendees(oldList = [], newList = []) {
+    const newToOldMap = new Map();
+    const usedOldIds = new Set();
+    const usedNewIds = new Set();
+
+    const safeOld = (Array.isArray(oldList) ? oldList : []).map((p, idx) => ({
+      ...p,
+      _roll: getParticipantRollNo(p, idx + 1),
+      _norm: normalizeAttendeeName(p.name)
+    }));
+
+    const safeNew = (Array.isArray(newList) ? newList : []).map((p, idx) => ({
+      ...p,
+      _roll: getParticipantRollNo(p, idx + 1),
+      _norm: normalizeAttendeeName(p.name)
+    }));
+
+    // Pass 1: Exact Roll No & Exact Name
+    safeNew.forEach(newP => {
+      if (usedNewIds.has(newP.id)) return;
+      const match = safeOld.find(oldP => {
+        if (usedOldIds.has(oldP.id)) return false;
+        return newP._roll !== '' && oldP._roll === newP._roll && oldP._norm === newP._norm;
+      });
+
+      if (match) {
+        newToOldMap.set(newP.id, match);
+        usedOldIds.add(match.id);
+        usedNewIds.add(newP.id);
+      }
+    });
+
+    // Pass 2: Exact Roll No & Fuzzy Name (e.g. same Roll No, "Anoop" -> "Anoop Krishnan")
+    safeNew.forEach(newP => {
+      if (usedNewIds.has(newP.id)) return;
+      if (newP._roll === '') return;
+
+      const match = safeOld.find(oldP => {
+        if (usedOldIds.has(oldP.id)) return false;
+        if (oldP._roll !== newP._roll) return false;
+        return isNameFuzzyMatch(oldP.name, newP.name);
+      });
+
+      if (match) {
+        newToOldMap.set(newP.id, match);
+        usedOldIds.add(match.id);
+        usedNewIds.add(newP.id);
+      }
+    });
+
+    // Pass 3: Exact Name (even if Roll No differs)
+    safeNew.forEach(newP => {
+      if (usedNewIds.has(newP.id)) return;
+      if (!newP._norm || newP._norm.length < 2) return;
+
+      const match = safeOld.find(oldP => {
+        if (usedOldIds.has(oldP.id)) return false;
+        return oldP._norm === newP._norm;
+      });
+
+      if (match) {
+        newToOldMap.set(newP.id, match);
+        usedOldIds.add(match.id);
+        usedNewIds.add(newP.id);
+      }
+    });
+
+    // Pass 4: Fuzzy Name Match across remaining
+    safeNew.forEach(newP => {
+      if (usedNewIds.has(newP.id)) return;
+      if (!newP._norm || newP._norm.length < 3) return;
+
+      const match = safeOld.find(oldP => {
+        if (usedOldIds.has(oldP.id)) return false;
+        return isNameFuzzyMatch(oldP.name, newP.name);
+      });
+
+      if (match) {
+        newToOldMap.set(newP.id, match);
+        usedOldIds.add(match.id);
+        usedNewIds.add(newP.id);
+      }
+    });
+
+    return {
+      matches: newToOldMap,
+      matchedCount: newToOldMap.size,
+      unmatchedOldCount: safeOld.length - newToOldMap.size,
+      unmatchedNewCount: safeNew.length - newToOldMap.size
+    };
+  }
+
+  /**
+   * Remaps attendance session records from old participants to new participants.
+   * Unmapped records are discarded while matched records are preserved under the new participant IDs.
+   */
+  function remapSessionsRecords(sessions = [], newParticipants = [], newToOldMap = new Map()) {
+    if (!Array.isArray(sessions) || sessions.length === 0) return sessions;
+
+    return sessions.map(session => {
+      const oldRecords = session.records || {};
+      const newRecords = {};
+
+      newParticipants.forEach(newP => {
+        const mappedOld = newToOldMap.get(newP.id);
+        if (mappedOld && oldRecords[mappedOld.id] !== undefined) {
+          newRecords[newP.id] = oldRecords[mappedOld.id];
+        }
+      });
+
+      return {
+        ...session,
+        records: newRecords
+      };
+    });
+  }
+
   function syncProgramWithAssignedGroup(prog) {
     if (!prog || !prog.assignedGroupId || !window.userGroupsData || !window.userGroupsData.groups) return;
     const group = window.userGroupsData.groups.find(g => g.id === prog.assignedGroupId);
     if (group && Array.isArray(group.members)) {
-      prog.participants = group.members.map((m, idx) => ({
+      const newParticipants = group.members.map((m, idx) => ({
         id: m.id,
         name: m.name,
         rollNo: (typeof window.getUgMemberRollNo === 'function') ? window.getUgMemberRollNo(m, idx + 1) : (m.rollNo || String(idx + 1))
       }));
+
+      // If program already has participants and sessions, check if remapping is needed (e.g. member IDs or roster modified)
+      if (Array.isArray(prog.participants) && prog.participants.length > 0 && Array.isArray(prog.sessions) && prog.sessions.length > 0) {
+        const oldIds = new Set(prog.participants.map(p => p.id));
+        const hasIdMismatch = newParticipants.some(np => !oldIds.has(np.id));
+        if (hasIdMismatch) {
+          const matchResult = matchAttendees(prog.participants, newParticipants);
+          prog.sessions = remapSessionsRecords(prog.sessions, newParticipants, matchResult.matches);
+        }
+      }
+
+      prog.participants = newParticipants;
     }
   }
 
@@ -592,7 +793,22 @@
     renderAttFormParticipants();
   }
 
-  function saveProgramForm(e) {
+  function areRostersEqual(listA = [], listB = []) {
+    if (!Array.isArray(listA) || !Array.isArray(listB)) return false;
+    if (listA.length !== listB.length) return false;
+    for (let i = 0; i < listA.length; i++) {
+      const a = listA[i];
+      const b = listB[i];
+      const aRoll = String(a.rollNo !== undefined && a.rollNo !== null ? a.rollNo : (i + 1)).trim();
+      const bRoll = String(b.rollNo !== undefined && b.rollNo !== null ? b.rollNo : (i + 1)).trim();
+      if (a.id !== b.id || a.name !== b.name || aRoll !== bRoll) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async function saveProgramForm(e) {
     if (e) e.preventDefault();
 
     // Auto-add any attendee currently typed in input before saving
@@ -619,24 +835,64 @@
     if (attFormEditingProgramId) {
       const prog = attendanceData.programs.find(p => p.id === attFormEditingProgramId);
       if (prog) {
-        prog.name = name;
-        prog.description = desc;
-        prog.assignedGroupId = attDraftAssignedGroupId;
-        prog.isCopiedFromGroup = attDraftIsCopiedFromGroup;
+        let newParticipants = [];
         if (attDraftAssignedGroupId) {
           const group = (window.userGroupsData && window.userGroupsData.groups)
             ? window.userGroupsData.groups.find(g => g.id === attDraftAssignedGroupId)
             : null;
           if (group && Array.isArray(group.members)) {
-            prog.participants = group.members.map((m, idx) => ({
+            newParticipants = group.members.map((m, idx) => ({
               id: m.id,
               name: m.name,
               rollNo: (typeof window.getUgMemberRollNo === 'function') ? window.getUgMemberRollNo(m, idx + 1) : (m.rollNo || String(idx + 1))
             }));
           }
         } else {
-          prog.participants = JSON.parse(JSON.stringify(attFormParticipantsDraft));
+          newParticipants = JSON.parse(JSON.stringify(attFormParticipantsDraft));
         }
+
+        const isRosterChanged = !areRostersEqual(prog.participants, newParticipants) 
+          || prog.assignedGroupId !== attDraftAssignedGroupId 
+          || prog.isCopiedFromGroup !== attDraftIsCopiedFromGroup;
+
+        const hasRecordedSessions = Array.isArray(prog.sessions) && prog.sessions.some(s => s.records && Object.keys(s.records).length > 0);
+
+        if (isRosterChanged && Array.isArray(prog.participants) && prog.participants.length > 0 && hasRecordedSessions) {
+          const matchResult = matchAttendees(prog.participants, newParticipants);
+
+          const message = `You are saving changes to the active attendee roster for "${name}".\n\n`
+            + `• Original Attendees: ${prog.participants.length}\n`
+            + `• Updated Attendees: ${newParticipants.length}\n`
+            + `• Recoverable Attendees: ${matchResult.matchedCount} (attendance history preserved)\n`
+            + (matchResult.unmatchedOldCount > 0 
+              ? `• Unmapped Attendees: ${matchResult.unmatchedOldCount} (past records will be retired)\n\n` 
+              : `\n`)
+            + `Do you want to apply and save these changes to the active attendance list?`;
+
+          const confirmed = await window.showConfirmDialog({
+            title: 'Update Active Attendee List?',
+            message: message,
+            confirmText: 'Save & Update Roster',
+            cancelText: 'Keep Editing',
+            isDanger: matchResult.unmatchedOldCount > 0
+          });
+
+          if (!confirmed) {
+            return;
+          }
+
+          // Remap session records
+          prog.sessions = remapSessionsRecords(prog.sessions, newParticipants, matchResult.matches);
+        } else if (isRosterChanged && Array.isArray(prog.participants) && prog.participants.length > 0 && Array.isArray(prog.sessions) && prog.sessions.length > 0) {
+          const matchResult = matchAttendees(prog.participants, newParticipants);
+          prog.sessions = remapSessionsRecords(prog.sessions, newParticipants, matchResult.matches);
+        }
+
+        prog.name = name;
+        prog.description = desc;
+        prog.assignedGroupId = attDraftAssignedGroupId;
+        prog.isCopiedFromGroup = attDraftIsCopiedFromGroup;
+        prog.participants = newParticipants;
       }
     } else {
       savedProgramId = 'prog_' + Date.now();
@@ -1730,28 +1986,60 @@
           return;
         }
 
-        if (attFormParticipantsDraft.length > 0) {
+        const group = await window.showUserGroupSelectModal('copy');
+        if (!group) return;
+
+        const newParticipants = (group.members || []).map((m, idx) => ({
+          id: 'part_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substring(2, 6),
+          name: m.name,
+          rollNo: (typeof window.getUgMemberRollNo === 'function') ? window.getUgMemberRollNo(m, idx + 1) : (m.rollNo || String(idx + 1))
+        }));
+
+        const existingProg = attFormEditingProgramId 
+          ? attendanceData.programs.find(p => p.id === attFormEditingProgramId) 
+          : null;
+        const baselineParticipants = existingProg && Array.isArray(existingProg.participants) && existingProg.participants.length > 0
+          ? existingProg.participants
+          : attFormParticipantsDraft;
+        const hasRecordedSessions = existingProg && Array.isArray(existingProg.sessions) && existingProg.sessions.some(s => s.records && Object.keys(s.records).length > 0);
+
+        if (baselineParticipants.length > 0) {
+          const matchResult = matchAttendees(baselineParticipants, newParticipants);
+
+          let message = '';
+          if (hasRecordedSessions) {
+            message = `Replacing the current roster (${baselineParticipants.length} attendees) with "${group.name}" (${newParticipants.length} members).\n\nIntelligent mapping will preserve attendance history for ${matchResult.matchedCount} matching attendee${matchResult.matchedCount === 1 ? '' : 's'} (matched by roll number and name). Only recoverable entries will be mapped; any completely unmatchable records will be discarded.\n\nDo you want to proceed?`;
+          } else {
+            message = `Replacing the current attendee list (${baselineParticipants.length} attendees) with "${group.name}" (${newParticipants.length} members). Do you want to proceed?`;
+          }
+
           const confirmed = await window.showConfirmDialog({
             title: 'Copy from User Group',
-            message: 'You have existing attendees in this list. Copying from a User Group will replace your current attendee list. Do you want to proceed?',
-            confirmText: 'Continue & Copy',
+            message: message,
+            confirmText: hasRecordedSessions ? 'Copy & Map Attendance' : 'Continue & Copy',
             cancelText: 'Keep Current List',
-            isDanger: true
+            isDanger: hasRecordedSessions
           });
           if (!confirmed) return;
-        }
 
-        const group = await window.showUserGroupSelectModal('copy');
-        if (group) {
           attDraftAssignedGroupId = null;
           attDraftIsCopiedFromGroup = true;
-          attFormParticipantsDraft = (group.members || []).map((m, idx) => ({
-            id: 'part_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substring(2, 6),
-            name: m.name,
-            rollNo: (typeof window.getUgMemberRollNo === 'function') ? window.getUgMemberRollNo(m, idx + 1) : (m.rollNo || String(idx + 1))
-          }));
+          attFormParticipantsDraft = newParticipants;
           renderAttFormParticipants();
-          if (typeof window.showToast === 'function') window.showToast(`Copied ${attFormParticipantsDraft.length} attendees from "${group.name}"`);
+
+          if (typeof window.showToast === 'function') {
+            if (hasRecordedSessions) {
+              window.showToast(`Copied ${newParticipants.length} attendees. Attendance mapped for ${matchResult.matchedCount} attendee${matchResult.matchedCount === 1 ? '' : 's'}! 🎯`);
+            } else {
+              window.showToast(`Copied ${newParticipants.length} attendees from "${group.name}"`);
+            }
+          }
+        } else {
+          attDraftAssignedGroupId = null;
+          attDraftIsCopiedFromGroup = true;
+          attFormParticipantsDraft = newParticipants;
+          renderAttFormParticipants();
+          if (typeof window.showToast === 'function') window.showToast(`Copied ${newParticipants.length} attendees from "${group.name}"`);
         }
       });
     }
@@ -1765,34 +2053,58 @@
           return;
         }
 
-        if (attFormParticipantsDraft.length > 0) {
-          const confirmed = await window.showConfirmDialog({
-            title: 'Assign Master User Group',
-            message: 'You currently have a manually maintained participant list. Assigning a User Group will replace your current list and keep this program in permanent sync with the master User Group. For any roster changes, you must edit the User Group in Manage. Do you want to proceed?',
-            confirmText: 'Continue & Assign',
-            cancelText: 'Keep Current List',
-            isDanger: true
-          });
-          if (!confirmed) return;
-        } else {
-          const confirmed = await window.showConfirmDialog({
-            title: 'Assign Master User Group',
-            message: 'Assigning a User Group will keep this program in permanent sync with the master User Group. The attendee list cannot be edited directly from this screen; all future changes must be made in Manage > User Groups. Do you want to proceed?',
-            confirmText: 'Select User Group',
-            cancelText: 'Cancel'
-          });
-          if (!confirmed) return;
-        }
-
         const group = await window.showUserGroupSelectModal('assign');
-        if (group) {
+        if (!group) return;
+
+        const newParticipants = (group.members || []).map((m, idx) => ({
+          id: m.id,
+          name: m.name,
+          rollNo: (typeof window.getUgMemberRollNo === 'function') ? window.getUgMemberRollNo(m, idx + 1) : (m.rollNo || String(idx + 1))
+        }));
+
+        const existingProg = attFormEditingProgramId 
+          ? attendanceData.programs.find(p => p.id === attFormEditingProgramId) 
+          : null;
+        const baselineParticipants = existingProg && Array.isArray(existingProg.participants) && existingProg.participants.length > 0
+          ? existingProg.participants
+          : attFormParticipantsDraft;
+        const hasRecordedSessions = existingProg && Array.isArray(existingProg.sessions) && existingProg.sessions.some(s => s.records && Object.keys(s.records).length > 0);
+
+        if (baselineParticipants.length > 0) {
+          const matchResult = matchAttendees(baselineParticipants, newParticipants);
+
+          let message = '';
+          if (hasRecordedSessions) {
+            message = `Assigning "${group.name}" (${newParticipants.length} members) will link this program in permanent sync with the master User Group.\n\nAttendance history will be automatically mapped to ${matchResult.matchedCount} matching attendee${matchResult.matchedCount === 1 ? '' : 's'} (matched by roll number and name). Only recoverable entries will be mapped; any completely unmatchable records will be discarded.\n\nAll future roster changes must be made in Manage > User Groups. Do you want to proceed?`;
+          } else {
+            message = `Assigning "${group.name}" (${newParticipants.length} members) will link this program in permanent sync with the master User Group. All future roster edits must be made in Manage > User Groups. Do you want to proceed?`;
+          }
+
+          const confirmed = await window.showConfirmDialog({
+            title: 'Assign Master User Group',
+            message: message,
+            confirmText: 'Assign & Live Sync',
+            cancelText: 'Keep Current List',
+            isDanger: hasRecordedSessions
+          });
+          if (!confirmed) return;
+
           attDraftAssignedGroupId = group.id;
           attDraftIsCopiedFromGroup = false;
-          attFormParticipantsDraft = (group.members || []).map((m, idx) => ({
-            id: m.id,
-            name: m.name,
-            rollNo: (typeof window.getUgMemberRollNo === 'function') ? window.getUgMemberRollNo(m, idx + 1) : (m.rollNo || String(idx + 1))
-          }));
+          attFormParticipantsDraft = newParticipants;
+          renderAttFormParticipants();
+
+          if (typeof window.showToast === 'function') {
+            if (hasRecordedSessions) {
+              window.showToast(`Linked to "${group.name}". Attendance mapped for ${matchResult.matchedCount} attendee${matchResult.matchedCount === 1 ? '' : 's'}! 🎯`);
+            } else {
+              window.showToast(`Linked program to User Group: "${group.name}"`);
+            }
+          }
+        } else {
+          attDraftAssignedGroupId = group.id;
+          attDraftIsCopiedFromGroup = false;
+          attFormParticipantsDraft = newParticipants;
           renderAttFormParticipants();
           if (typeof window.showToast === 'function') window.showToast(`Linked program to User Group: "${group.name}"`);
         }
@@ -2034,12 +2346,32 @@
     set: (val) => { attendanceData = val; },
     configurable: true
   });
+  Object.defineProperty(window, 'attFormParticipantsDraft', {
+    get: () => attFormParticipantsDraft,
+    set: (val) => { attFormParticipantsDraft = val; },
+    configurable: true
+  });
+  Object.defineProperty(window, 'attDraftAssignedGroupId', {
+    get: () => attDraftAssignedGroupId,
+    set: (val) => { attDraftAssignedGroupId = val; },
+    configurable: true
+  });
+  Object.defineProperty(window, 'attDraftIsCopiedFromGroup', {
+    get: () => attDraftIsCopiedFromGroup,
+    set: (val) => { attDraftIsCopiedFromGroup = val; },
+    configurable: true
+  });
+  window.normalizeAttendeeName = normalizeAttendeeName;
+  window.isNameFuzzyMatch = isNameFuzzyMatch;
+  window.matchAttendees = matchAttendees;
+  window.remapSessionsRecords = remapSessionsRecords;
   window.loadAttendanceDataFromStorage = loadAttendanceDataFromStorage;
   window.saveAttendanceDataToStorage = saveAttendanceDataToStorage;
   window.syncProgramWithAssignedGroup = syncProgramWithAssignedGroup;
   window.showAttScreen = showAttScreen;
   window.renderAttProgramsList = renderAttProgramsList;
   window.openProgramForm = openProgramForm;
+  window.saveProgramForm = saveProgramForm;
   window.openProgramMatrix = openProgramMatrix;
   window.openRecordSession = openRecordSession;
   window.isAttRecordSessionDirty = isAttRecordSessionDirty;
