@@ -175,8 +175,8 @@
       window.loadStateFromStorage();
     }
 
-    if (typeof window.loadAttendanceDataFromStorage === 'function') window.loadAttendanceDataFromStorage();
     if (typeof window.loadUserGroupsDataFromStorage === 'function') window.loadUserGroupsDataFromStorage();
+    if (typeof window.loadAttendanceDataFromStorage === 'function') window.loadAttendanceDataFromStorage();
     loadFeelgoodMessagesFromJson();
 
     // 3. UI Setup
