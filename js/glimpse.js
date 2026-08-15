@@ -1,4 +1,4 @@
-// Glimpse Timetable, Notes & WhatsApp Generator Engine Module
+// Glimpse Daily Entry, WhatsApp Generator & Classes Integration Module
 (function(window) {
   'use strict';
 
@@ -8,45 +8,16 @@
   let currentNotes = {}; // slotKey -> string
   let currentEnabled = {}; // slotKey -> boolean
   let selectedDate = new Date();
-  let selectedEditorDay = 'Monday';
   let classAndDiv = '2G';
   let currentDayEmoji = '🪂';
 
   // --- LOCAL STORAGE HELPERS ---
   function loadStateFromStorage() {
     try {
-      const classDivInput = document.getElementById('classDiv');
+      // 1. Populate Class & Div dropdown from Classes App and select current active/saved class
+      populateClassDivDropdown();
 
-      const savedSubjects = localStorage.getItem('glimpse_subjects_v10');
-      if (savedSubjects) {
-        subjects = JSON.parse(savedSubjects);
-        if (Array.isArray(subjects)) {
-          subjects.forEach(s => {
-            const iconVal = (typeof s.icon === 'string' && s.icon.trim()) ? s.icon : ((typeof s.emoji === 'string' && s.emoji.trim()) ? s.emoji : '📖');
-            s.icon = iconVal;
-            s.emoji = iconVal;
-          });
-        }
-      } else {
-        subjects = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_SUBJECTS || []));
-      }
-
-      const savedTimetable = localStorage.getItem('glimpse_timetable_v10');
-      if (savedTimetable) {
-        timetable = JSON.parse(savedTimetable);
-      } else {
-        timetable = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_TIMETABLE || {}));
-      }
-
-      const savedClassDiv = localStorage.getItem('glimpse_class_div_v10');
-      if (savedClassDiv) {
-        classAndDiv = savedClassDiv;
-        if (classDivInput) classDivInput.value = classAndDiv;
-      } else {
-        classAndDiv = '';
-        if (classDivInput) classDivInput.value = '';
-      }
-
+      // 2. Load daily notes and enabled slot toggles
       const savedNotes = localStorage.getItem('glimpse_notes_v10');
       if (savedNotes) {
         currentNotes = JSON.parse(savedNotes);
@@ -57,13 +28,13 @@
       const savedEnabled = localStorage.getItem('glimpse_enabled_v10');
       if (savedEnabled) {
         currentEnabled = JSON.parse(savedEnabled);
+      } else {
+        currentEnabled = {};
       }
     } catch (e) {
-      console.error('Error loading storage:', e);
-      subjects = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_SUBJECTS || []));
-      timetable = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_TIMETABLE || {}));
+      console.error('Error loading storage in glimpse.js:', e);
       currentNotes = {};
-      classAndDiv = '';
+      currentEnabled = {};
     }
   }
 
@@ -87,6 +58,121 @@
     localStorage.setItem('glimpse_class_div_v10', classAndDiv);
   }
 
+  // --- CLASSES APP INTEGRATION & DROPDOWN ENGINE ---
+  function populateClassDivDropdown() {
+    const classDivSelect = document.getElementById('classDiv');
+    if (!classDivSelect) return;
+
+    let clsData = window.classesData;
+    if (!clsData && typeof window.loadClassesDataFromStorage === 'function') {
+      clsData = window.loadClassesDataFromStorage();
+    }
+
+    const classesList = (clsData && Array.isArray(clsData.classes)) ? clsData.classes : [];
+    const activeClassesList = classesList.filter(c => c.isActive !== false);
+
+    if (activeClassesList.length === 0) {
+      classDivSelect.innerHTML = `<option value="">-- No Active Classes --</option>`;
+      subjects = [];
+      timetable = {};
+      classAndDiv = '';
+      renderAll();
+      return;
+    }
+
+    // Build options list for active classes only
+    let optionsHtml = '';
+    activeClassesList.forEach(c => {
+      optionsHtml += `<option value="${c.id}">${window.escapeHtml(c.name)}</option>`;
+    });
+    classDivSelect.innerHTML = optionsHtml;
+
+    // Retrieve last remembered selection or first active class
+    const savedClassId = localStorage.getItem('glimpse_selected_class_id_v1') || (clsData && clsData.activeClassId);
+    const targetClass = activeClassesList.find(c => c.id === savedClassId) || activeClassesList[0];
+
+    if (targetClass) {
+      classDivSelect.value = targetClass.id;
+      selectGlimpseClass(targetClass.id, false);
+    }
+  }
+
+  function selectGlimpseClass(classId, userInteracted = true) {
+    if (!classId) return;
+
+    let clsData = window.classesData;
+    if (!clsData && typeof window.loadClassesDataFromStorage === 'function') {
+      clsData = window.loadClassesDataFromStorage();
+    }
+
+    const classesList = (clsData && Array.isArray(clsData.classes)) ? clsData.classes : [];
+    const targetClass = classesList.find(c => c.id === classId);
+    if (!targetClass) return;
+
+    // 1. Remember selection in localStorage
+    try {
+      localStorage.setItem('glimpse_selected_class_id_v1', classId);
+    } catch (e) {}
+
+    // 2. Set activeClassId in classes data
+    if (clsData) {
+      clsData.activeClassId = classId;
+      if (typeof window.saveClassesDataToStorage === 'function') {
+        window.saveClassesDataToStorage();
+      }
+    }
+
+    // 3. Flow subjects, timetable, and class name directly from the class
+    subjects = JSON.parse(JSON.stringify(targetClass.subjects || []));
+    timetable = JSON.parse(JSON.stringify(targetClass.timetable || {}));
+    classAndDiv = targetClass.name || '';
+
+    // Legacy sync
+    saveSubjectsToStorage();
+    saveTimetableToStorage();
+    saveSettingsToStorage();
+
+    // 4. Update dropdown UI
+    const classDivSelect = document.getElementById('classDiv');
+    if (classDivSelect && classDivSelect.value !== classId) {
+      classDivSelect.value = classId;
+    }
+
+    // 5. Apply timetable for current date & render
+    applyTimetableForDate(selectedDate);
+    renderAll();
+
+    if (userInteracted && typeof window.showToast === 'function') {
+      window.showToast(`Switched to Class: ${targetClass.name}`);
+    }
+  }
+
+  function syncGlimpseWithActiveClass(activeClass) {
+    populateClassDivDropdown();
+    if (!activeClass) return;
+
+    if (Array.isArray(activeClass.subjects)) {
+      subjects = JSON.parse(JSON.stringify(activeClass.subjects));
+    }
+    if (activeClass.timetable && typeof activeClass.timetable === 'object') {
+      timetable = JSON.parse(JSON.stringify(activeClass.timetable));
+    }
+    if (activeClass.name) {
+      classAndDiv = activeClass.name;
+    }
+    const classDivSelect = document.getElementById('classDiv');
+    if (classDivSelect && activeClass.id) {
+      classDivSelect.value = activeClass.id;
+    }
+
+    try {
+      localStorage.setItem('glimpse_selected_class_id_v1', activeClass.id);
+    } catch (e) {}
+
+    applyTimetableForDate(selectedDate);
+    renderAll();
+  }
+
   // --- TIMETABLE ENGINE ---
   function getSlotKey(slotIndex) {
     return `slot_${slotIndex}`;
@@ -95,12 +181,9 @@
   function applyTimetableForDate(dateObj) {
     const days = window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[dateObj.getDay()];
-    let activeSubjectIds = timetable[dayName];
-    if (!activeSubjectIds || activeSubjectIds.length === 0) {
-      activeSubjectIds = subjects.slice(0, 8).map(s => s.id);
-    }
+    let activeSubjectIds = timetable[dayName] || [];
 
-    // Ensure 8 slots are active by default for scheduled subjects
+    // Ensure slots are active by default for scheduled subjects
     for (let i = 0; i < 8; i++) {
       const slotKey = getSlotKey(i);
       if (i < activeSubjectIds.length && activeSubjectIds[i]) {
@@ -156,14 +239,12 @@
   // --- DATE & KEYCAP FORMATTING ---
   function setupDatePicker() {
     const glimpseDateInput = document.getElementById('glimpseDate');
-    const days = window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     if (glimpseDateInput) glimpseDateInput.value = `${yyyy}-${mm}-${dd}`;
     selectedDate = today;
-    selectedEditorDay = days[today.getDay()];
   }
 
   function getFormattedKeycapDate(dateObj) {
@@ -218,8 +299,6 @@
   function renderAll() {
     renderDateAndDayHeader();
     renderSubjectEntryCards();
-    renderSubjectManagerCards();
-    renderTimetableEditor();
     renderWhatsAppPreview();
     updateTimeStamp();
   }
@@ -245,32 +324,30 @@
   function getActiveDaySlots() {
     const days = window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[selectedDate.getDay()];
-    let periodSubjectIds = timetable[dayName];
-    if (!periodSubjectIds || periodSubjectIds.length === 0) {
-      periodSubjectIds = subjects.slice(0, 8).map(s => s.id);
-    }
-    
-    const slots = [];
-    periodSubjectIds.forEach((subId, index) => {
-      const subject = subjects.find(s => s.id === subId);
-      if (subject) {
-        const slotKey = getSlotKey(index);
-        const isEnabled = currentEnabled[slotKey] !== false;
-        
-        let noteText = currentNotes[slotKey];
-        if (noteText === undefined) {
-          noteText = '';
-        }
+    let periodSubjectIds = timetable[dayName] || [];
 
-        slots.push({
-          slotIndex: index,
-          slotKey: slotKey,
-          subject: subject,
-          enabled: isEnabled,
-          notes: noteText
-        });
+    const slots = [];
+    for (let i = 0; i < 8; i++) {
+      const subId = periodSubjectIds[i];
+      if (subId) {
+        const subject = subjects.find(s => s.id === subId);
+        if (subject) {
+          const slotKey = getSlotKey(i);
+          const isEnabled = currentEnabled[slotKey] !== false;
+          let noteText = currentNotes[slotKey];
+          if (noteText === undefined) {
+            noteText = subject.notes || '';
+          }
+          slots.push({
+            slotIndex: i,
+            slotKey: slotKey,
+            subject: subject,
+            notes: noteText,
+            enabled: isEnabled
+          });
+        }
       }
-    });
+    }
     return slots;
   }
 
@@ -282,12 +359,15 @@
     subjectEntryListEl.innerHTML = '';
 
     const daySlots = getActiveDaySlots();
+    const days = window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = days[selectedDate.getDay()];
+
     if (daySlots.length === 0) {
       subjectEntryListEl.innerHTML = `
         <div class="empty-state-card">
           <div class="empty-icon">📝</div>
-          <h3>No Subjects for Today</h3>
-          <p>Click <strong>+ Add Subject</strong> under Subjects tab or configure your weekly <strong>Timetable</strong> to get started.</p>
+          <h3>No Subjects Scheduled for Today</h3>
+          <p>No periods have been assigned for <strong>${dayName}</strong> in <strong>${window.escapeHtml(classAndDiv || 'the selected class')}</strong>. You can configure the weekly schedule under the <strong>Classes App</strong>.</p>
         </div>
       `;
       if (activeCountBadgeEl) activeCountBadgeEl.textContent = '0';
@@ -304,7 +384,7 @@
       card.className = `subject-card ${slot.enabled ? '' : 'disabled'}`;
 
       const fullName = subject.suffix ? `${subject.name} ${subject.suffix}` : subject.name;
-      const periodNum = index + 1;
+      const periodNum = slot.slotIndex + 1;
       const iconVal = subject.icon || subject.emoji || '📖';
 
       card.innerHTML = `
@@ -349,109 +429,13 @@
     if (activeCountBadgeEl) activeCountBadgeEl.textContent = activeCount;
   }
 
-  function renderSubjectManagerCards() {
-    const subjectsManagerListEl = document.getElementById('subjectsManagerList');
-    if (!subjectsManagerListEl) return;
-
-    subjectsManagerListEl.innerHTML = '';
-
-    if (subjects.length === 0) {
-      subjectsManagerListEl.innerHTML = `
-        <div class="empty-state-card">
-          <div class="empty-icon">📚</div>
-          <h3>No Subjects Created Yet</h3>
-          <p>Tap the <strong>+ Add Subject</strong> button above to create custom subjects.</p>
-        </div>
-      `;
-      return;
-    }
-
-    subjects.forEach((subject, index) => {
-      const card = document.createElement('div');
-      card.className = 'manager-card';
-      const iconVal = (typeof subject.icon === 'string' && subject.icon.trim()) ? subject.icon : ((typeof subject.emoji === 'string' && subject.emoji.trim()) ? subject.emoji : '📖');
-      subject.icon = iconVal;
-      subject.emoji = iconVal;
-
-      card.innerHTML = `
-        <div class="manager-left">
-          <span class="badge-box">${subject.badge || '🟦'}</span>
-          <div>
-            <div class="subject-title">${iconVal} ${window.escapeHtml(subject.name)}</div>
-            ${subject.suffix ? `<span class="subject-suffix">${window.escapeHtml(subject.suffix)}</span>` : ''}
-          </div>
-        </div>
-        <div class="manager-actions">
-          <button class="action-icon-btn move-up" data-index="${index}" title="Move Up" ${index === 0 ? 'disabled' : ''}>↑</button>
-          <button class="action-icon-btn move-down" data-index="${index}" title="Move Down" ${index === subjects.length - 1 ? 'disabled' : ''}>↓</button>
-          <button class="action-icon-btn edit-sub" data-id="${subject.id}" title="Edit Subject">✎</button>
-          <button class="action-icon-btn delete delete-sub" data-id="${subject.id}" title="Delete Subject">✕</button>
-        </div>
-      `;
-
-      subjectsManagerListEl.appendChild(card);
-    });
-  }
-
-  function renderTimetableEditor() {
-    const daySelectorPills = document.getElementById('daySelectorPills');
-    const currentEditorDayTitle = document.getElementById('currentEditorDayTitle');
-    const daySubjectCount = document.getElementById('daySubjectCount');
-    const timetablePeriodSlots = document.getElementById('timetablePeriodSlots');
-
-    if (!daySelectorPills || !timetablePeriodSlots) return;
-
-    // Render Day Selector Pills
-    const pills = daySelectorPills.querySelectorAll('.day-pill');
-    pills.forEach(pill => {
-      const day = pill.getAttribute('data-day');
-      if (day === selectedEditorDay) {
-        pill.classList.add('active');
-      } else {
-        pill.classList.remove('active');
-      }
-    });
-
-    if (currentEditorDayTitle) currentEditorDayTitle.textContent = `${selectedEditorDay} Schedule (8 Periods)`;
-
-    const periodSubjectIds = timetable[selectedEditorDay] || [];
-    if (daySubjectCount) daySubjectCount.textContent = `${periodSubjectIds.length} Period Slots`;
-
-    timetablePeriodSlots.innerHTML = '';
-
-    for (let i = 0; i < 8; i++) {
-      const currentSubId = periodSubjectIds[i] || '';
-      
-      const slotCard = document.createElement('div');
-      slotCard.className = 'period-slot-card';
-
-      let optionsHtml = `<option value="">-- Free / No Class --</option>`;
-      subjects.forEach(sub => {
-        const fullName = sub.suffix ? `${sub.name} ${sub.suffix}` : sub.name;
-        const selected = sub.id === currentSubId ? 'selected' : '';
-        const iconVal = sub.icon || sub.emoji || '📖';
-        optionsHtml += `<option value="${sub.id}" ${selected}>${sub.badge || '🟦'} ${iconVal} ${window.escapeHtml(fullName)}</option>`;
-      });
-
-      slotCard.innerHTML = `
-        <span class="period-number-badge">Period #${i + 1}</span>
-        <select class="input-control period-select" data-slot-index="${i}">
-          ${optionsHtml}
-        </select>
-      `;
-
-      timetablePeriodSlots.appendChild(slotCard);
-    }
-  }
-
   // --- WHATSAPP MESSAGE GENERATOR ENGINE ---
   function generateWhatsAppMessage() {
-    const classDivInput = document.getElementById('classDiv');
     const headerEmojiInput = document.getElementById('headerEmoji');
 
     const keycapDateStr = getFormattedKeycapDate(selectedDate);
     const dayStr = getFormattedDayOfWeek(selectedDate);
-    const classDivStr = (classDivInput && classDivInput.value.trim()) || '2G';
+    const classDivStr = classAndDiv || '2G';
     const titleEmoji = headerEmojiInput ? (headerEmojiInput.value.trim() || '🪁') : '🪁';
 
     const lines = [];
@@ -481,9 +465,7 @@
       const notesRaw = slot.notes || '';
       const rawLines = notesRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-      if (rawLines.length === 0) {
-        lines.push('* Session completed');
-      } else {
+      if (rawLines.length > 0) {
         rawLines.forEach(rLine => {
           if (rLine.startsWith('*') || rLine.startsWith('•') || rLine.startsWith('-')) {
             lines.push(rLine);
@@ -580,24 +562,9 @@
   }
 
   function loadPreset2G() {
-    const classDivInput = document.getElementById('classDiv');
-
-    subjects = JSON.parse(JSON.stringify(window.PRESET_2G_SUBJECTS || []));
-    timetable = JSON.parse(JSON.stringify(window.PRESET_2G_TIMETABLE || {}));
-    classAndDiv = '2G';
-    if (classDivInput) classDivInput.value = '2G';
-    currentNotes = {};
-    currentEnabled = {};
-
-    for (let i = 0; i < 8; i++) {
-      currentEnabled[getSlotKey(i)] = true;
+    if (typeof window.loadClassesPreset2G === 'function') {
+      window.loadClassesPreset2G();
     }
-
-    saveSubjectsToStorage();
-    saveTimetableToStorage();
-    saveNotesToStorage();
-    saveEnabledToStorage();
-    saveSettingsToStorage();
 
     try {
       localStorage.setItem('glimpse_last_active_route_v1', '#/dashboard');
@@ -609,124 +576,17 @@
     window.location.reload();
   }
 
-  // --- SUBJECT MODAL CONTROLS ---
-  function openSubjectModal(subId = null) {
-    const subjectModal = document.getElementById('subjectModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const editSubjectId = document.getElementById('editSubjectId');
-    const subName = document.getElementById('subName');
-    const subEmoji = document.getElementById('subEmoji');
-    const subBadge = document.getElementById('subBadge');
-    const subSuffix = document.getElementById('subSuffix');
-
-    if (!subjectModal || !subName) return;
-
-    if (subId) {
-      if (modalTitle) modalTitle.textContent = 'Edit Subject';
-      const sub = subjects.find(s => s.id === subId);
-      if (sub) {
-        if (editSubjectId) editSubjectId.value = sub.id;
-        subName.value = sub.name;
-        if (subEmoji) subEmoji.value = sub.icon || sub.emoji || '🔤';
-        if (subBadge) subBadge.value = sub.badge || '🟥';
-        if (subSuffix) subSuffix.value = sub.suffix || '';
-      }
-    } else {
-      if (modalTitle) modalTitle.textContent = 'Add Subject';
-      if (editSubjectId) editSubjectId.value = '';
-      subName.value = '';
-      if (subEmoji) subEmoji.value = '🔤';
-      if (subBadge) subBadge.value = '🟥';
-      if (subSuffix) subSuffix.value = '';
-    }
-
-    subjectModal.inert = false;
-    subjectModal.classList.add('active');
-    subjectModal.removeAttribute('aria-hidden');
-    subName.focus();
-  }
-
-  function closeSubjectModal() {
-    const subjectModal = document.getElementById('subjectModal');
-    if (!subjectModal) return;
-    if (document.activeElement && subjectModal.contains(document.activeElement)) {
-      document.activeElement.blur();
-    }
-    subjectModal.classList.remove('active');
-    subjectModal.setAttribute('aria-hidden', 'true');
-    subjectModal.inert = true;
-  }
-
-  function saveModalSubject() {
-    const editSubjectId = document.getElementById('editSubjectId');
-    const subName = document.getElementById('subName');
-    const subEmoji = document.getElementById('subEmoji');
-    const subBadge = document.getElementById('subBadge');
-    const subSuffix = document.getElementById('subSuffix');
-
-    if (!subName) return;
-
-    const name = subName.value.trim();
-    const icon = (subEmoji && subEmoji.value.trim()) || '📚';
-    const badge = (subBadge && subBadge.value) || '🟥';
-    const suffix = (subSuffix && subSuffix.value.trim()) || '';
-    const id = editSubjectId ? editSubjectId.value : '';
-
-    if (!name) return;
-
-    if (id) {
-      const subIndex = subjects.findIndex(s => s.id === id);
-      if (subIndex !== -1) {
-        subjects[subIndex].name = name;
-        subjects[subIndex].icon = icon;
-        subjects[subIndex].emoji = icon;
-        subjects[subIndex].badge = badge;
-        subjects[subIndex].suffix = suffix;
-      }
-    } else {
-      const newId = 'sub_' + Date.now();
-      const newSubject = {
-        id: newId,
-        badge: badge,
-        icon: icon,
-        emoji: icon,
-        name: name,
-        suffix: suffix,
-        notes: ''
-      };
-      subjects.push(newSubject);
-    }
-
-    saveSubjectsToStorage();
-    closeSubjectModal();
-    renderAll();
-    if (typeof window.showToast === 'function') {
-      window.showToast(id ? 'Subject updated!' : 'New subject added!');
-    }
-  }
-
   // --- GLIMPSE EVENT LISTENERS SETUP ---
   function setupGlimpseEventListeners() {
     const glimpseDateInput = document.getElementById('glimpseDate');
-    const classDivInput = document.getElementById('classDiv');
+    const classDivSelect = document.getElementById('classDiv');
     const headerEmojiInput = document.getElementById('headerEmoji');
     const randomEmojiBtn = document.getElementById('randomEmojiBtn');
     const clearNotesBtn = document.getElementById('clearNotesBtn');
-    const addSubjectBtn = document.getElementById('addSubjectBtn');
-    const resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
     const copyMessageBtn = document.getElementById('copyMessageBtn');
     const copyMessageBtn2 = document.getElementById('copyMessageBtn2');
     const shareWhatsAppBtn = document.getElementById('shareWhatsAppBtn');
-    const resetTimetableBtn = document.getElementById('resetTimetableBtn');
-    const reapplyTimetableBtn = document.getElementById('reapplyTimetableBtn');
     const subjectEntryListEl = document.getElementById('subjectEntryList');
-    const subjectsManagerListEl = document.getElementById('subjectsManagerList');
-    const timetablePeriodSlots = document.getElementById('timetablePeriodSlots');
-    const daySelectorPills = document.getElementById('daySelectorPills');
-    const subjectForm = document.getElementById('subjectForm');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const cancelModalBtn = document.getElementById('cancelModalBtn');
-    const subjectModal = document.getElementById('subjectModal');
 
     // Date change
     if (glimpseDateInput) {
@@ -735,7 +595,6 @@
           selectedDate = new Date(e.target.value + 'T00:00:00');
           const days = window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           const dayName = days[selectedDate.getDay()];
-          selectedEditorDay = dayName;
 
           // Auto apply timetable for newly selected day
           applyTimetableForDate(selectedDate);
@@ -746,12 +605,13 @@
       });
     }
 
-    // Class/Div change
-    if (classDivInput) {
-      classDivInput.addEventListener('input', (e) => {
-        classAndDiv = e.target.value;
-        saveSettingsToStorage();
-        renderWhatsAppPreview();
+    // Class/Div select dropdown change
+    if (classDivSelect) {
+      classDivSelect.addEventListener('change', (e) => {
+        const selectedId = e.target.value;
+        if (selectedId) {
+          selectGlimpseClass(selectedId, true);
+        }
       });
     }
 
@@ -838,160 +698,6 @@
       });
     }
 
-    // Subject Manager Actions (Delegation)
-    if (subjectsManagerListEl) {
-      subjectsManagerListEl.addEventListener('click', async (e) => {
-        const target = e.target;
-        if (target.classList.contains('move-up')) {
-          const index = parseInt(target.getAttribute('data-index'), 10);
-          if (index > 0) {
-            const temp = subjects[index];
-            subjects[index] = subjects[index - 1];
-            subjects[index - 1] = temp;
-            saveSubjectsToStorage();
-            renderAll();
-          }
-        } else if (target.classList.contains('move-down')) {
-          const index = parseInt(target.getAttribute('data-index'), 10);
-          if (index < subjects.length - 1) {
-            const temp = subjects[index];
-            subjects[index] = subjects[index + 1];
-            subjects[index + 1] = temp;
-            saveSubjectsToStorage();
-            renderAll();
-          }
-        } else if (target.classList.contains('edit-sub')) {
-          const id = target.getAttribute('data-id');
-          openSubjectModal(id);
-        } else if (target.classList.contains('delete-sub')) {
-          const id = target.getAttribute('data-id');
-          const sub = subjects.find(s => s.id === id);
-          const subTitle = sub ? sub.name : 'this subject';
-
-          const confirmed = await window.showConfirmDialog({
-            title: `Delete Subject "${subTitle}"?`,
-            message: `Are you sure you want to delete ${subTitle}? It will be removed from your subject roster.`,
-            confirmText: 'Delete Subject',
-            cancelText: 'Cancel',
-            isDanger: true
-          });
-
-          if (confirmed) {
-            subjects = subjects.filter(s => s.id !== id);
-            saveSubjectsToStorage();
-            renderAll();
-            if (typeof window.showToast === 'function') window.showToast('Subject deleted');
-          }
-        }
-      });
-    }
-
-    // Day Selector in Timetable Editor
-    if (daySelectorPills) {
-      daySelectorPills.addEventListener('click', (e) => {
-        const pill = e.target.closest('.day-pill');
-        if (pill) {
-          selectedEditorDay = pill.getAttribute('data-day');
-          renderTimetableEditor();
-        }
-      });
-    }
-
-    // Period Select change in Timetable Editor
-    if (timetablePeriodSlots) {
-      timetablePeriodSlots.addEventListener('change', (e) => {
-        if (e.target.classList.contains('period-select')) {
-          const slotIndex = parseInt(e.target.getAttribute('data-slot-index'), 10);
-          const selectedSubId = e.target.value;
-
-          if (!timetable[selectedEditorDay]) {
-            timetable[selectedEditorDay] = [];
-          }
-
-          timetable[selectedEditorDay][slotIndex] = selectedSubId;
-          saveTimetableToStorage();
-
-          const days = window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-          if (days[selectedDate.getDay()] === selectedEditorDay) {
-            applyTimetableForDate(selectedDate);
-            renderSubjectEntryCards();
-            renderWhatsAppPreview();
-          }
-
-          if (typeof window.showToast === 'function') window.showToast(`Updated Period #${slotIndex + 1}`);
-        }
-      });
-    }
-
-    // Reapply Timetable Button
-    if (reapplyTimetableBtn) {
-      reapplyTimetableBtn.addEventListener('click', () => {
-        applyTimetableForDate(selectedDate);
-        renderSubjectEntryCards();
-        renderWhatsAppPreview();
-        const days = window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        if (typeof window.showToast === 'function') window.showToast(`Applied ${days[selectedDate.getDay()]} schedule! 🔄`);
-      });
-    }
-
-    // Reset Timetable to Default
-    if (resetTimetableBtn) {
-      resetTimetableBtn.addEventListener('click', async () => {
-        const confirmed = await window.showConfirmDialog({
-          title: 'Reset Timetable to Default?',
-          message: 'This will reset your weekly timetable schedule across all days back to default empty periods.',
-          confirmText: 'Reset Timetable',
-          cancelText: 'Cancel',
-          isDanger: true
-        });
-
-        if (confirmed) {
-          timetable = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_TIMETABLE || {}));
-          saveTimetableToStorage();
-          applyTimetableForDate(selectedDate);
-          renderAll();
-          if (typeof window.showToast === 'function') window.showToast('Weekly timetable reset to default');
-        }
-      });
-    }
-
-    // Add Subject Button
-    if (addSubjectBtn) {
-      addSubjectBtn.addEventListener('click', () => openSubjectModal(null));
-    }
-
-    // Reset All to Default
-    if (resetDefaultsBtn) {
-      resetDefaultsBtn.addEventListener('click', async () => {
-        const confirmed = await window.showConfirmDialog({
-          title: 'Reset Subjects & Timetable?',
-          message: 'This will reset all subjects and weekly timetable configurations. Custom notes will be cleared.',
-          confirmText: 'Reset to Defaults',
-          cancelText: 'Cancel',
-          isDanger: true
-        });
-
-        if (confirmed) {
-          subjects = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_SUBJECTS || []));
-          timetable = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_TIMETABLE || {}));
-          currentNotes = {};
-          currentEnabled = {};
-          classAndDiv = '';
-          if (classDivInput) classDivInput.value = '';
-
-          saveSubjectsToStorage();
-          saveTimetableToStorage();
-          saveNotesToStorage();
-          saveEnabledToStorage();
-          saveSettingsToStorage();
-
-          applyTimetableForDate(selectedDate);
-          renderAll();
-          if (typeof window.showToast === 'function') window.showToast('Reset to default subjects and timetable!');
-        }
-      });
-    }
-
     // Copy WhatsApp Message
     function copyWhatsAppSummary() {
       const msg = generateWhatsAppMessage();
@@ -1026,22 +732,6 @@
         }
       });
     }
-
-    // Subject Modal Form Submit & Cancel
-    if (subjectForm) {
-      subjectForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        saveModalSubject();
-      });
-    }
-
-    if (closeModalBtn) closeModalBtn.addEventListener('click', closeSubjectModal);
-    if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeSubjectModal);
-    if (subjectModal) {
-      subjectModal.addEventListener('click', (e) => {
-        if (e.target === subjectModal) closeSubjectModal();
-      });
-    }
   }
 
   // Export to global scope
@@ -1061,6 +751,8 @@
     configurable: true
   });
   window.loadStateFromStorage = loadStateFromStorage;
+  window.populateClassDivDropdown = populateClassDivDropdown;
+  window.selectGlimpseClass = selectGlimpseClass;
   window.saveSubjectsToStorage = saveSubjectsToStorage;
   window.saveTimetableToStorage = saveTimetableToStorage;
   window.saveNotesToStorage = saveNotesToStorage;
@@ -1077,6 +769,7 @@
   window.setupTabNavigation = setupTabNavigation;
   window.checkUrlForSecretPreset = checkUrlForSecretPreset;
   window.loadPreset2G = loadPreset2G;
+  window.syncGlimpseWithActiveClass = syncGlimpseWithActiveClass;
   window.setupGlimpseEventListeners = setupGlimpseEventListeners;
 
 })(window);

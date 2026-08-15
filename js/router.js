@@ -81,11 +81,36 @@
       return;
     }
 
+    const isClsDirty = typeof window.isClsFormDirty === 'function' && window.isClsFormDirty();
+    if (isClsDirty && !isCheckingDirtyNavigation) {
+      isCheckingDirtyNavigation = true;
+      const targetHash = hashStr;
+      if (typeof window.confirmUnsavedClsChanges === 'function') {
+        window.confirmUnsavedClsChanges().then(confirmed => {
+          isCheckingDirtyNavigation = false;
+          if (confirmed) {
+            handleRoute(targetHash);
+          } else {
+            const currentRoute = window.clsCurrentEditingClassId
+              ? `#/manage/classes/form?id=${window.clsCurrentEditingClassId}`
+              : `#/manage/classes/form`;
+            window.history.pushState(null, '', currentRoute);
+          }
+        });
+      } else {
+        isCheckingDirtyNavigation = false;
+      }
+      return;
+    }
+
     isNavigatingFromRouter = true;
     const { path, params } = parseHash(hashStr);
 
     const rawHash = (hashStr || '').toUpperCase();
     if (rawHash === '#2G' || rawHash === '#/2G' || rawHash === '2G') {
+      if (typeof window.loadClassesPreset2G === 'function') {
+        window.loadClassesPreset2G();
+      }
       if (typeof window.loadPreset2G === 'function') {
         window.loadPreset2G();
       }
@@ -106,29 +131,33 @@
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
 
     if (path.startsWith('glimpse')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewManageApp) viewManageApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
 
-      const sub = path.split('/')[1];
-      if (sub) {
-        const tabMap = { 'entry': 'tab-entry', 'subjects': 'tab-subjects', 'timetable': 'tab-timetable', 'preview': 'tab-preview' };
-        const targetTab = tabMap[sub] || ('tab-' + sub);
-        const tabBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
-        if (tabBtn) {
-          const tabBtns = document.querySelectorAll('.tab-btn');
-          const tabPanes = document.querySelectorAll('.tab-pane');
-          tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
-          tabPanes.forEach(p => p.classList.remove('active'));
-          tabBtn.classList.add('active');
-          tabBtn.setAttribute('aria-selected', 'true');
-          const pane = document.getElementById(targetTab);
-          if (pane) pane.classList.add('active');
-        }
+      const sub = path.split('/')[1] || 'entry';
+      if (sub === 'subjects' || sub === 'timetable') {
+        navigateToRoute('#/manage/classes');
+        return;
+      }
+      const tabMap = { 'entry': 'tab-entry', 'preview': 'tab-preview' };
+      const targetTab = tabMap[sub] || 'tab-entry';
+      const tabBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
+      if (tabBtn) {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+        tabPanes.forEach(p => p.classList.remove('active'));
+        tabBtn.classList.add('active');
+        tabBtn.setAttribute('aria-selected', 'true');
+        const pane = document.getElementById(targetTab);
+        if (pane) pane.classList.add('active');
       }
     } else if (path.startsWith('attendance')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
@@ -173,6 +202,7 @@
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewManageApp) viewManageApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
 
       const isForm = path.includes('/form');
@@ -186,11 +216,36 @@
         if (typeof window.showUgScreen === 'function') window.showUgScreen('ug-screen-groups');
         if (typeof window.renderUgGroupsList === 'function') window.renderUgGroupsList();
       }
+    } else if (path.startsWith('manage/classes') || path.startsWith('classes')) {
+      if (viewDashboard) viewDashboard.classList.remove('active');
+      if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+      if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewManageApp) viewManageApp.classList.remove('active');
+      if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.add('active');
+
+      const isForm = path.includes('/form');
+      const isTimetable = path.includes('/timetable') || path.includes('/matrix');
+      const cId = params.get('id');
+
+      if (isForm) {
+        if (typeof window.openClassForm === 'function') {
+          window.openClassForm(cId, false);
+        }
+      } else if (isTimetable) {
+        if (typeof window.openClassTimetable === 'function') {
+          window.openClassTimetable(cId, false);
+        }
+      } else {
+        if (typeof window.showClsScreen === 'function') window.showClsScreen('cls-screen-classes');
+        if (typeof window.renderClsClassesList === 'function') window.renderClsClassesList();
+      }
     } else if (path.startsWith('manage')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewManageApp) viewManageApp.classList.add('active');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -198,6 +253,7 @@
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewManageApp) viewManageApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewDashboard) viewDashboard.classList.add('active');
       if (typeof window.updateLandingPageHero === 'function') {
         window.updateLandingPageHero();
@@ -212,12 +268,14 @@
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     navigateToRoute('#/glimpse');
@@ -228,12 +286,14 @@
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.showAttScreen === 'function') window.showAttScreen('att-screen-programs');
@@ -246,12 +306,14 @@
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
     const viewManageApp = document.getElementById('view-manage-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewManageApp) viewManageApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     navigateToRoute('#/manage');
@@ -262,12 +324,14 @@
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewManageApp = document.getElementById('view-manage-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewManageApp) viewManageApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.showUgScreen === 'function') window.showUgScreen('ug-screen-groups');
@@ -275,17 +339,39 @@
     navigateToRoute('#/manage/groups');
   }
 
+  function openClassesApp() {
+    const viewDashboard = document.getElementById('view-dashboard');
+    const viewGlimpseApp = document.getElementById('view-glimpse-app');
+    const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewManageApp = document.getElementById('view-manage-app');
+    const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
+
+    if (viewDashboard) viewDashboard.classList.remove('active');
+    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+    if (viewManageApp) viewManageApp.classList.remove('active');
+    if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.showClsScreen === 'function') window.showClsScreen('cls-screen-classes');
+    if (typeof window.renderClsClassesList === 'function') window.renderClsClassesList();
+    navigateToRoute('#/manage/classes');
+  }
+
   function openDashboard() {
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
     const viewDashboard = document.getElementById('view-dashboard');
 
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewDashboard) viewDashboard.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.updateLandingPageHero === 'function') {
@@ -299,6 +385,7 @@
     const tileManageApp = document.getElementById('tileManageApp');
     const tileAttendanceApp = document.getElementById('tileAttendanceApp');
     const tileUserGroup = document.getElementById('tileUserGroup');
+    const tileClasses = document.getElementById('tileClasses');
     const backToDashboardBtn = document.getElementById('backToDashboardBtn');
     const manageBackToDashboardBtn = document.getElementById('manageBackToDashboardBtn');
 
@@ -313,6 +400,9 @@
     }
     if (tileUserGroup) {
       tileUserGroup.addEventListener('click', openUserGroupsApp);
+    }
+    if (tileClasses) {
+      tileClasses.addEventListener('click', openClassesApp);
     }
     if (backToDashboardBtn) {
       backToDashboardBtn.addEventListener('click', openDashboard);
@@ -350,6 +440,7 @@
   window.openAttendanceApp = openAttendanceApp;
   window.openManageApp = openManageApp;
   window.openUserGroupsApp = openUserGroupsApp;
+  window.openClassesApp = openClassesApp;
   window.openDashboard = openDashboard;
   window.setupViewNavigation = setupViewNavigation;
 

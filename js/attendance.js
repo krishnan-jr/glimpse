@@ -534,7 +534,10 @@
 
           <div class="att-card-actions">
             <button class="btn btn-subtle btn-sm att-edit-prog-btn" data-id="${prog.id}">✎ Edit</button>
-            <button class="btn btn-subtle btn-sm att-delete-prog-btn" data-id="${prog.id}" style="color: var(--danger);">✕ Delete</button>
+            <button class="btn btn-subtle btn-sm att-delete-prog-btn" data-id="${prog.id}" style="color: var(--danger);">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              <span>Delete</span>
+            </button>
           </div>
         </div>
       `;
@@ -722,7 +725,9 @@
           <span class="name-text"><strong>${window.escapeHtml(rollNo)}.</strong> ${window.escapeHtml(p.name)}</span>
           <div class="item-actions">
             <button type="button" class="action-icon-btn edit-participant-btn" data-id="${p.id}" title="Edit Attendee Details">✎</button>
-            <button type="button" class="action-icon-btn delete delete-participant-btn" data-id="${p.id}" title="Remove Attendee">✕</button>
+            <button type="button" class="action-icon-btn delete delete-participant-btn" data-id="${p.id}" title="Remove Attendee">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
           </div>
         </div>
       `;
@@ -1035,7 +1040,9 @@
             <span>${formatDateLabel(sess.date)}</span>
             <div class="date-header-actions">
               <button class="action-icon-btn att-edit-sess-btn" data-date="${sess.date}" title="Edit Session">✎</button>
-              <button class="action-icon-btn delete att-delete-sess-btn" data-date="${sess.date}" title="Delete Session">✕</button>
+              <button class="action-icon-btn delete att-delete-sess-btn" data-date="${sess.date}" title="Delete Session">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
             </div>
           </div>
         </th>

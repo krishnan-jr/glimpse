@@ -5,7 +5,7 @@
   // ─────────────────────────────────────────────────────────────────────────
   // DATABASE SCHEMA VERSION & DATA MIGRATION ENGINE
   // ─────────────────────────────────────────────────────────────────────────
-  const CURRENT_DB_SCHEMA_VERSION = 'V05';
+  const CURRENT_DB_SCHEMA_VERSION = 'V06';
 
   /**
    * Parses schema version string into a comparable integer.
@@ -365,6 +365,101 @@
           });
           storage.setJson('glimpse_subjects_v10', cleanSubjects);
         }
+      }
+    },
+    {
+      version: 'V06',
+      versionNum: 6,
+      description: 'Initialize Classes collection (glimpse_classes_data_v1) and migrate existing subjects, timetable, and class & division settings.',
+      migrate: (storage) => {
+        let classesData = storage.getJson('glimpse_classes_data_v1', null);
+        if (!classesData || typeof classesData !== 'object' || !Array.isArray(classesData.classes)) {
+          classesData = { classes: [], activeClassId: null };
+        }
+
+        const existingSubjects = storage.getJson('glimpse_subjects_v10', null);
+        const existingTimetable = storage.getJson('glimpse_timetable_v10', null);
+        const existingClassDiv = storage.getItem('glimpse_class_div_v10') || '';
+
+        // If no classes exist yet and there is existing subjects/timetable/class data
+        if (classesData.classes.length === 0) {
+          const className = existingClassDiv.trim() || '2G';
+          const defaultSubjects = (Array.isArray(existingSubjects) && existingSubjects.length > 0)
+            ? existingSubjects
+            : JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_SUBJECTS || []));
+          const defaultTimetable = (existingTimetable && typeof existingTimetable === 'object')
+            ? existingTimetable
+            : JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_TIMETABLE || {}));
+
+          const initialClass = {
+            id: `cls_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            name: className,
+            description: `Class ${className}`,
+            isActive: true,
+            subjects: defaultSubjects,
+            timetable: defaultTimetable,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          classesData.classes.push(initialClass);
+          classesData.activeClassId = initialClass.id;
+        }
+
+        // Validate and clean each class structure
+        classesData.classes = classesData.classes.map(c => {
+          const cSubjects = Array.isArray(c.subjects) ? c.subjects.map(s => {
+            const iconVal = (typeof s.icon === 'string' && s.icon.trim()) ? s.icon : ((typeof s.emoji === 'string' && s.emoji.trim()) ? s.emoji : '📖');
+            return {
+              id: s.id || `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              name: typeof s.name === 'string' ? s.name : 'Untitled',
+              icon: iconVal,
+              emoji: iconVal,
+              badge: typeof s.badge === 'string' ? s.badge : '🟦',
+              suffix: typeof s.suffix === 'string' ? s.suffix : '',
+              notes: typeof s.notes === 'string' ? s.notes : ''
+            };
+          }) : [];
+
+          const cTimetable = (c.timetable && typeof c.timetable === 'object') ? c.timetable : {};
+          (window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']).forEach(d => {
+            if (!Array.isArray(cTimetable[d])) {
+              cTimetable[d] = [];
+            }
+            while (cTimetable[d].length < 8) {
+              cTimetable[d].push('');
+            }
+          });
+
+          return {
+            id: c.id || `cls_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            name: typeof c.name === 'string' ? c.name : 'Class',
+            description: typeof c.description === 'string' ? c.description : '',
+            isActive: c.isActive !== false,
+            subjects: cSubjects,
+            timetable: cTimetable,
+            createdAt: c.createdAt || new Date().toISOString(),
+            updatedAt: c.updatedAt || new Date().toISOString()
+          };
+        });
+
+        // Ensure activeClassId points to a valid active class
+        const validActiveClass = classesData.classes.find(c => c.id === classesData.activeClassId && c.isActive !== false)
+          || classesData.classes.find(c => c.isActive !== false)
+          || classesData.classes[0];
+
+        if (validActiveClass) {
+          classesData.activeClassId = validActiveClass.id;
+        }
+
+        // Initialize or sanitize last selected class ID for Glimpse
+        const currentSavedSelectedId = storage.getItem('glimpse_selected_class_id_v1');
+        const selectedClassExists = currentSavedSelectedId && classesData.classes.some(c => c.id === currentSavedSelectedId && c.isActive !== false);
+        if (!selectedClassExists && classesData.activeClassId) {
+          storage.setItem('glimpse_selected_class_id_v1', classesData.activeClassId);
+        }
+
+        storage.setJson('glimpse_classes_data_v1', classesData);
       }
     }
   ];

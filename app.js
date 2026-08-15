@@ -167,6 +167,11 @@
     }
 
     // 2. Load storage states
+    if (typeof window.loadClassesDataFromStorage === 'function') window.loadClassesDataFromStorage();
+    if (typeof window.loadUserGroupsDataFromStorage === 'function') window.loadUserGroupsDataFromStorage();
+    if (typeof window.loadAttendanceDataFromStorage === 'function') window.loadAttendanceDataFromStorage();
+    loadFeelgoodMessagesFromJson();
+
     const isSecretPresetTriggered = (typeof window.checkUrlForSecretPreset === 'function') 
       ? window.checkUrlForSecretPreset() 
       : false;
@@ -174,10 +179,6 @@
     if (!isSecretPresetTriggered && typeof window.loadStateFromStorage === 'function') {
       window.loadStateFromStorage();
     }
-
-    if (typeof window.loadUserGroupsDataFromStorage === 'function') window.loadUserGroupsDataFromStorage();
-    if (typeof window.loadAttendanceDataFromStorage === 'function') window.loadAttendanceDataFromStorage();
-    loadFeelgoodMessagesFromJson();
 
     // 3. UI Setup
     if (typeof window.applyRandomTitleEmojiOnRefresh === 'function') window.applyRandomTitleEmojiOnRefresh();
@@ -190,6 +191,7 @@
     if (typeof window.setupGlimpseEventListeners === 'function') window.setupGlimpseEventListeners();
     if (typeof window.setupAttendanceEventListeners === 'function') window.setupAttendanceEventListeners();
     if (typeof window.setupUserGroupsEventListeners === 'function') window.setupUserGroupsEventListeners();
+    if (typeof window.setupClassesEventListeners === 'function') window.setupClassesEventListeners();
     if (typeof window.setupBackupSecretFeature === 'function') window.setupBackupSecretFeature();
     setupGlobalRouterEvents();
     updateLandingPageHero();

@@ -368,6 +368,23 @@ body {
   box-shadow: var(--focus-ring);
 }
 
+select.input-control.class-div-select,
+select.class-div-select {
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23767676' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+
+textarea.input-control {
+  height: auto;
+  min-height: 68px;
+  padding: 8px var(--space-3);
+  line-height: 1.4;
+  resize: vertical;
+}
+
 /* Date input specific iOS Safari fixes */
 input[type="date"].input-control,
 input[type="date"] {
@@ -648,34 +665,43 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .badge-box {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background-color: var(--surface-warm);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .subject-title-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .subject-title {
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .subject-suffix {
   font-size: var(--text-xs);
   color: var(--muted);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 /* Switch Toggle */
@@ -801,10 +827,11 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: 10px 12px;
   background-color: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
+  gap: var(--space-2);
   transition: border-color var(--motion-fast) var(--ease-standard);
 }
 
@@ -815,28 +842,38 @@ input:checked + .slider:before {
 .manager-left {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.manager-left > div:last-child {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .manager-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .action-icon-btn {
   background: transparent;
   border: none;
   color: var(--muted);
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-pill);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  flex-shrink: 0;
   transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
 }
 
@@ -926,12 +963,17 @@ input:checked + .slider:before {
   margin-bottom: var(--space-3);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border-soft);
+  gap: var(--space-2);
 }
 
 .day-editor-header h3 {
   font-family: var(--font-display);
   font-size: var(--text-base);
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .day-subject-count {
@@ -941,6 +983,8 @@ input:checked + .slider:before {
   background-color: var(--surface-warm);
   padding: 3px var(--space-3);
   border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .timetable-slots-list {
@@ -1246,6 +1290,9 @@ input:checked + .slider:before {
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .form-row {
@@ -1809,6 +1856,12 @@ input:checked + .slider:before {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-3);
+}
+
+.section-title-row > div:first-child {
+  flex: 1;
+  min-width: 0;
 }
 
 .section-title-row h3 {
@@ -1868,6 +1921,27 @@ input:checked + .slider:before {
 }
 
 @media (max-width: 480px) {
+  .manager-card {
+    padding: 8px 8px;
+    gap: 4px;
+  }
+
+  .manager-left {
+    gap: 6px;
+  }
+
+  .manager-left .badge-box {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+  }
+
+  .action-icon-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+
   .section-title-row:has(.att-roster-source-actions) {
     flex-direction: column;
     align-items: flex-start;
@@ -1887,6 +1961,31 @@ input:checked + .slider:before {
     padding: 6px 8px;
     font-size: var(--text-xs);
     white-space: nowrap;
+  }
+
+  .filter-row-bottom {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .custom-date-wrapper {
+    gap: 4px;
+  }
+
+  .custom-date-field {
+    gap: 3px;
+  }
+
+  .custom-range-input {
+    max-width: 108px;
+    min-width: 96px;
+    font-size: 11px;
+    padding: 2px 2px 2px 4px;
+  }
+
+  .segmented-btn {
+    padding: 0 8px;
+    font-size: 11px;
   }
 }
 
@@ -2256,13 +2355,16 @@ input:checked + .slider:before {
 .date-nav-wrapper {
   display: inline-flex;
   align-items: center;
-  height: 36px;
+  justify-content: center;
+  min-height: 36px;
+  height: auto;
   gap: var(--space-1);
   background: var(--surface-warm);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  padding: 0 4px;
+  padding: 2px 4px;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .nav-arrow-btn {
@@ -2277,11 +2379,13 @@ input:checked + .slider:before {
 }
 
 .date-nav-display {
-  padding: 0 8px;
+  padding: 0 4px;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .date-range-text {
@@ -2293,26 +2397,63 @@ input:checked + .slider:before {
 
 .date-nav-input {
   font-size: var(--text-xs);
-  padding: 2px 8px;
+  padding: 2px 6px;
   height: 28px;
+  min-height: 28px;
   border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--fg);
   border: 1px solid var(--border);
+  width: auto;
+  min-width: 0;
 }
 
 .custom-date-wrapper {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 0 4px;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 2px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.custom-date-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
 }
 
 .custom-date-label {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--fg);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.custom-range-input {
+  font-size: 11.5px;
+  padding: 2px 4px 2px 6px;
+  height: 28px;
+  min-height: 28px;
+  max-width: 118px;
+  min-width: 102px;
+  width: auto;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.custom-range-input::-webkit-calendar-picker-indicator {
+  background-size: 13px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
 }
 
 /* 3. Today Action Icon Button (Uniform Height: 36px) */
@@ -2555,3 +2696,189 @@ input:checked + .slider:before {
 .att-toggle-btn.absent:hover {
   background: rgba(239, 68, 68, 0.25);
 }
+
+/* ==========================================================================
+   CLASSES APPLICATION & TIMETABLE MATRIX STYLES
+   ========================================================================== */
+
+.class-avatar-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.class-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.class-active-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.active-class-card {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.inactive-class-card {
+  opacity: 0.75;
+  background: var(--surface-warm);
+}
+
+.inactive-class-card:hover {
+  opacity: 1;
+}
+
+.cls-card-dropdown-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subjects-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Timetable Matrix Table */
+.cls-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.cls-matrix-table th {
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 700;
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.cls-matrix-table th.col-sticky-name,
+.cls-matrix-table td.col-sticky-name {
+  text-align: left;
+  padding: 10px 12px;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 2;
+  border-right: 2px solid var(--border);
+  min-width: 110px;
+}
+
+.cls-matrix-table th.col-sticky-name {
+  background: var(--surface-warm);
+  z-index: 3;
+}
+
+.cls-matrix-slot-cell {
+  padding: 6px 8px;
+  border: 1px solid var(--border-soft);
+  text-align: center;
+  min-width: 140px;
+}
+
+.cls-matrix-select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg);
+  border: 1px solid var(--border-soft);
+  color: var(--fg);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cls-matrix-select:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+/* Timetable Day-by-Day Editor */
+.timetable-slot-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.timetable-slot-card:hover {
+  border-color: var(--border);
+}
+
+.slot-num-badge {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-warm);
+  border: 1px solid var(--border-soft);
+  color: var(--fg);
+  min-width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.slot-select-wrapper {
+  flex: 1;
+}
+
+.cls-day-slot-select {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+}
+
+.cls-clear-slot-btn {
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+}
+
+.cls-clear-slot-btn:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
