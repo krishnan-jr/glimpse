@@ -17,25 +17,25 @@
 
   // Secret Preset Data for 2G Class
   const PRESET_2G_SUBJECTS = [
-    { id: 'sub_1', badge: '🟥', icon: '🔤', name: 'English', suffix: '', notes: '' },
-    { id: 'sub_2', badge: '🟠', icon: '🧮', name: 'C. E.', suffix: '', notes: '' },
-    { id: 'sub_3', badge: '💛', icon: '✒️', name: 'Montessori', suffix: '', notes: '' },
-    { id: 'sub_4', badge: '🟩', icon: '📖', name: 'Malayalam', suffix: '', notes: '' },
-    { id: 'sub_4_cw', badge: '🟩', icon: '📖', name: 'Malayalam', suffix: 'C. W.', notes: '' },
-    { id: 'sub_5', badge: '🩵', icon: '🔢', name: 'M. A.', suffix: '', notes: '' },
-    { id: 'sub_6', badge: '🔵', icon: '🦁', name: 'G. K.', suffix: '', notes: '' },
-    { id: 'sub_7', badge: '💜', icon: '🎵', name: 'P. E.', suffix: '', notes: '' },
-    { id: 'sub_8', badge: '🤎', icon: '🌙', name: 'Arabic/MRI', suffix: '', notes: '' },
-    { id: 'sub_9', badge: '🟧', icon: '📐', name: 'Maths', suffix: '', notes: '' },
-    { id: 'sub_10', badge: '💖', icon: '📝', name: 'Hindi', suffix: '', notes: '' },
-    { id: 'sub_10_cw', badge: '💖', icon: '📝', name: 'Hindi', suffix: 'C. W.', notes: '' },
-    { id: 'sub_1_cw', badge: '🟥', icon: '🔤', name: 'English', suffix: 'C. W.', notes: '' },
-    { id: 'sub_11', badge: '🟢', icon: '🧘🏻‍♀️', name: 'Yoga', suffix: '', notes: '' },
-    { id: 'sub_12', badge: '🟦', icon: '📚', name: 'Library', suffix: '', notes: '' },
-    { id: 'sub_13', badge: '🩵', icon: '💻', name: 'I. T.', suffix: '', notes: '' },
-    { id: 'sub_14', badge: '🤍', icon: '💡', name: 'V. E.', suffix: '', notes: '' },
-    { id: 'sub_15', badge: '💜', icon: '🎨', name: 'Arts', suffix: '', notes: '' },
-    { id: 'sub_16', badge: '💖', icon: '🎼', name: 'Music', suffix: '', notes: '' }
+    { id: 'sub_1', badge: '🟥', icon: '🔤', name: 'English' },
+    { id: 'sub_2', badge: '🟠', icon: '🧮', name: 'C. E.' },
+    { id: 'sub_3', badge: '💛', icon: '✒️', name: 'Montessori' },
+    { id: 'sub_4', badge: '🟩', icon: '📖', name: 'Malayalam' },
+    { id: 'sub_4_cw', badge: '🟩', icon: '📖', name: 'Malayalam C. W.' },
+    { id: 'sub_5', badge: '🩵', icon: '🔢', name: 'M. A.' },
+    { id: 'sub_6', badge: '🔵', icon: '🦁', name: 'G. K.' },
+    { id: 'sub_7', badge: '💜', icon: '🎵', name: 'P. E.' },
+    { id: 'sub_8', badge: '🤎', icon: '🌙', name: 'Arabic/MRI' },
+    { id: 'sub_9', badge: '🟧', icon: '📐', name: 'Maths' },
+    { id: 'sub_10', badge: '💖', icon: '📝', name: 'Hindi' },
+    { id: 'sub_10_cw', badge: '💖', icon: '📝', name: 'Hindi C. W.' },
+    { id: 'sub_1_cw', badge: '🟥', icon: '🔤', name: 'English C. W.' },
+    { id: 'sub_11', badge: '🟢', icon: '🧘🏻‍♀️', name: 'Yoga' },
+    { id: 'sub_12', badge: '🟦', icon: '📚', name: 'Library' },
+    { id: 'sub_13', badge: '🩵', icon: '💻', name: 'I. T.' },
+    { id: 'sub_14', badge: '🤍', icon: '💡', name: 'V. E.' },
+    { id: 'sub_15', badge: '💜', icon: '🎨', name: 'Arts' },
+    { id: 'sub_16', badge: '💖', icon: '🎼', name: 'Music' }
   ];
 
   const PRESET_2G_TIMETABLE = {

@@ -347,7 +347,7 @@
           const isEnabled = currentEnabled[slotKey] !== false;
           let noteText = currentNotes[slotKey];
           if (noteText === undefined) {
-            noteText = subject.notes || '';
+            noteText = '';
           }
           slots.push({
             slotIndex: i,
@@ -394,7 +394,7 @@
       const card = document.createElement('div');
       card.className = `subject-card ${slot.enabled ? '' : 'disabled'}`;
 
-      const fullName = subject.suffix ? `${subject.name} ${subject.suffix}` : subject.name;
+      const fullName = subject.name;
       const periodNum = slot.slotIndex + 1;
       const iconVal = subject.icon || subject.emoji || '📖';
 
@@ -404,7 +404,6 @@
             <span class="badge-box">${subject.badge || '🟦'}</span>
             <div class="subject-title-wrap">
               <span class="subject-title">${iconVal} ${window.escapeHtml(subject.name)}</span>
-              ${subject.suffix ? `<span class="subject-suffix">${window.escapeHtml(subject.suffix)}</span>` : ''}
               <span class="card-period-tag">Period #${periodNum}</span>
             </div>
           </div>
@@ -467,7 +466,7 @@
       if (!slot.enabled) return;
 
       const subject = slot.subject;
-      const fullName = subject.suffix ? `${subject.name} ${subject.suffix}` : subject.name;
+      const fullName = subject.name;
       const iconVal = subject.icon || subject.emoji || '📖';
       
       const subjectHeader = `${subject.badge || '🟦'}${itemNumber}. *_${iconVal}${fullName}_*`;

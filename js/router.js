@@ -103,6 +103,24 @@
       return;
     }
 
+    const isMsDirty = (typeof window.isMsFormDirty === 'function' && window.isMsFormDirty()) ||
+                      (typeof window.isMsSheetDirty === 'function' && window.isMsSheetDirty());
+    if (isMsDirty && !isCheckingDirtyNavigation) {
+      isCheckingDirtyNavigation = true;
+      const targetHash = hashStr;
+      if (typeof window.confirmUnsavedMsChanges === 'function') {
+        window.confirmUnsavedMsChanges().then(confirmed => {
+          isCheckingDirtyNavigation = false;
+          if (confirmed) {
+            handleRoute(targetHash);
+          }
+        });
+      } else {
+        isCheckingDirtyNavigation = false;
+      }
+      return;
+    }
+
     isNavigatingFromRouter = true;
     const { path, params } = parseHash(hashStr);
 
@@ -129,12 +147,14 @@
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
 
     if (path.startsWith('glimpse')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
@@ -160,6 +180,7 @@
     } else if (path.startsWith('attendance')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+      if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
@@ -195,10 +216,39 @@
         if (typeof window.showAttScreen === 'function') window.showAttScreen('att-screen-programs');
         if (typeof window.renderAttProgramsList === 'function') window.renderAttProgramsList();
       }
+    } else if (path.startsWith('marksheet')) {
+      if (viewDashboard) viewDashboard.classList.remove('active');
+      if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+      if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.remove('active');
+      if (viewMarksheetApp) viewMarksheetApp.classList.add('active');
+
+      const sub = path.split('/')[1] || 'entries';
+      const entryId = params.get('id');
+
+      if (sub === 'form') {
+        if (typeof window.openMarkSheetForm === 'function') {
+          window.openMarkSheetForm(entryId, false);
+        }
+      } else if (sub === 'sheet' || sub === 'entry' || sub === 'matrix') {
+        if (entryId) {
+          if (typeof window.openMarkSheetWorkspace === 'function') {
+            window.openMarkSheetWorkspace(entryId, false);
+          }
+        } else {
+          if (typeof window.showMsScreen === 'function') window.showMsScreen('ms-screen-entries');
+          if (typeof window.renderMsEntriesList === 'function') window.renderMsEntriesList();
+        }
+      } else {
+        if (typeof window.showMsScreen === 'function') window.showMsScreen('ms-screen-entries');
+        if (typeof window.renderMsEntriesList === 'function') window.renderMsEntriesList();
+      }
     } else if (path.startsWith('manage/groups') || path.startsWith('user-groups') || path.startsWith('groups')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
 
@@ -217,6 +267,7 @@
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.add('active');
 
@@ -239,6 +290,7 @@
     } else {
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewDashboard) viewDashboard.classList.add('active');
@@ -253,12 +305,14 @@
   function openGlimpseApp() {
     const viewDashboard = document.getElementById('view-dashboard');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+    if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
@@ -269,12 +323,14 @@
   function openAttendanceApp() {
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
@@ -282,6 +338,26 @@
     if (typeof window.showAttScreen === 'function') window.showAttScreen('att-screen-programs');
     if (typeof window.renderAttProgramsList === 'function') window.renderAttProgramsList();
     navigateToRoute('#/attendance');
+  }
+
+  function openMarksheetApp() {
+    const viewDashboard = document.getElementById('view-dashboard');
+    const viewGlimpseApp = document.getElementById('view-glimpse-app');
+    const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
+
+    if (viewDashboard) viewDashboard.classList.remove('active');
+    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+    if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.remove('active');
+    if (viewMarksheetApp) viewMarksheetApp.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.showMsScreen === 'function') window.showMsScreen('ms-screen-entries');
+    if (typeof window.renderMsEntriesList === 'function') window.renderMsEntriesList();
+    navigateToRoute('#/marksheet');
   }
 
   function openManageApp() {
@@ -292,12 +368,14 @@
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+    if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -310,12 +388,14 @@
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+    if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -327,12 +407,14 @@
   function openDashboard() {
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewDashboard = document.getElementById('view-dashboard');
 
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+    if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewDashboard) viewDashboard.classList.add('active');
@@ -346,6 +428,7 @@
   function setupViewNavigation() {
     const tileGlimpseApp = document.getElementById('tileGlimpseApp');
     const tileAttendanceApp = document.getElementById('tileAttendanceApp');
+    const tileMarksheetApp = document.getElementById('tileMarksheetApp');
     const tileUserGroup = document.getElementById('tileUserGroup');
     const tileClasses = document.getElementById('tileClasses');
     const backToDashboardBtn = document.getElementById('backToDashboardBtn');
@@ -355,6 +438,9 @@
     }
     if (tileAttendanceApp) {
       tileAttendanceApp.addEventListener('click', openAttendanceApp);
+    }
+    if (tileMarksheetApp) {
+      tileMarksheetApp.addEventListener('click', openMarksheetApp);
     }
     if (tileUserGroup) {
       tileUserGroup.addEventListener('click', openUserGroupsApp);
@@ -393,6 +479,7 @@
   window.handleRoute = handleRoute;
   window.openGlimpseApp = openGlimpseApp;
   window.openAttendanceApp = openAttendanceApp;
+  window.openMarksheetApp = openMarksheetApp;
   window.openManageApp = openManageApp;
   window.openUserGroupsApp = openUserGroupsApp;
   window.openClassesApp = openClassesApp;

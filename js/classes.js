@@ -556,7 +556,6 @@
           <span class="badge-box">${subject.badge || '🟦'}</span>
           <div>
             <div class="subject-title">${iconVal} ${window.escapeHtml(subject.name)}</div>
-            ${subject.suffix ? `<span class="subject-suffix">${window.escapeHtml(subject.suffix)}</span>` : ''}
           </div>
         </div>
         <div class="manager-actions">
@@ -645,8 +644,6 @@
     const nameInput = document.getElementById('clsSubName');
     const iconInput = document.getElementById('clsSubIcon');
     const badgeInput = document.getElementById('clsSubBadge');
-    const suffixInput = document.getElementById('clsSubSuffix');
-    const notesInput = document.getElementById('clsSubNotes');
 
     if (!modal || !nameInput) return;
 
@@ -658,8 +655,6 @@
         nameInput.value = sub.name || '';
         if (iconInput) iconInput.value = sub.icon || sub.emoji || '📖';
         if (badgeInput) badgeInput.value = sub.badge || '🟦';
-        if (suffixInput) suffixInput.value = sub.suffix || '';
-        if (notesInput) notesInput.value = sub.notes || '';
       }
     } else {
       if (title) title.textContent = 'Add Subject';
@@ -667,8 +662,6 @@
       nameInput.value = '';
       if (iconInput) iconInput.value = '📖';
       if (badgeInput) badgeInput.value = '🟦';
-      if (suffixInput) suffixInput.value = '';
-      if (notesInput) notesInput.value = '';
     }
 
     modal.inert = false;
@@ -691,8 +684,6 @@
     const nameInput = document.getElementById('clsSubName');
     const iconInput = document.getElementById('clsSubIcon');
     const badgeInput = document.getElementById('clsSubBadge');
-    const suffixInput = document.getElementById('clsSubSuffix');
-    const notesInput = document.getElementById('clsSubNotes');
 
     if (!nameInput) return;
     const name = nameInput.value.trim();
@@ -703,8 +694,6 @@
 
     const icon = (iconInput && iconInput.value.trim()) || '📖';
     const badge = (badgeInput && badgeInput.value.trim()) || '🟦';
-    const suffix = (suffixInput && suffixInput.value.trim()) || '';
-    const notes = (notesInput && notesInput.value.trim()) || '';
     const editId = editIdInput ? editIdInput.value : '';
 
     if (editId) {
@@ -715,9 +704,7 @@
           name,
           icon,
           emoji: icon,
-          badge,
-          suffix,
-          notes
+          badge
         };
       }
     } else {
@@ -726,9 +713,7 @@
         name,
         icon,
         emoji: icon,
-        badge,
-        suffix,
-        notes
+        badge
       };
       clsDraftSubjects.push(newSubject);
     }
@@ -810,15 +795,19 @@
             <div class="cls-assigned-ug-card" data-group-id="${g.id}">
               <div class="assigned-ug-info">
                 <span class="sync-icon">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </span>
-                <div>
-                  <div style="font-weight: 600; font-size: var(--text-sm); color: var(--fg); margin-bottom: 2px;">${window.escapeHtml(g.name)}</div>
-                  <span style="font-size: var(--text-xs); color: var(--muted); font-weight: 500;">${count} ${count === 1 ? 'member' : 'members'} • Live Sync</span>
+                <div class="assigned-ug-text">
+                  <div class="assigned-ug-title">${window.escapeHtml(g.name)}</div>
+                  <div class="assigned-ug-meta">
+                    <span>${count} ${count === 1 ? 'member' : 'members'}</span>
+                    <span class="att-meta-divider"></span>
+                    <span class="sync-live-badge">Live Sync</span>
+                  </div>
                 </div>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm cls-unlink-single-ug-btn" data-group-id="${g.id}" style="color: var(--danger); gap: 6px; font-weight: 600;" title="Unlink ${window.escapeHtml(g.name)} from class">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+              <button type="button" class="btn btn-subtle btn-sm cls-unlink-single-ug-btn" data-group-id="${g.id}" title="Unlink ${window.escapeHtml(g.name)} from class">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
                 <span>Unlink</span>
               </button>
             </div>
@@ -950,7 +939,7 @@
 
       let optionsHtml = `<option value="">-- Free / No Class --</option>`;
       subjectsList.forEach(sub => {
-        const fullName = sub.suffix ? `${sub.name} ${sub.suffix}` : sub.name;
+        const fullName = sub.name;
         const selected = sub.id === currentSubId ? 'selected' : '';
         const iconVal = sub.icon || sub.emoji || '📖';
         optionsHtml += `<option value="${sub.id}" ${selected}>${sub.badge || '🟦'} ${iconVal} ${window.escapeHtml ? window.escapeHtml(fullName) : fullName}</option>`;

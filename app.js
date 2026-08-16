@@ -149,8 +149,10 @@
     window.addEventListener('beforeunload', (e) => {
       const isAttDirty = typeof window.isAttRecordSessionDirty === 'function' && window.isAttRecordSessionDirty();
       const isUgDirty = typeof window.isUgFormDirty === 'function' && window.isUgFormDirty();
+      const isMsDirty = (typeof window.isMsFormDirty === 'function' && window.isMsFormDirty()) ||
+                        (typeof window.isMsSheetDirty === 'function' && window.isMsSheetDirty());
 
-      if (isAttDirty || isUgDirty) {
+      if (isAttDirty || isUgDirty || isMsDirty) {
         e.preventDefault();
         e.returnValue = 'You have unsaved changes. Do you want to continue?';
         return e.returnValue;
@@ -174,6 +176,7 @@
     if (typeof window.loadClassesDataFromStorage === 'function') window.loadClassesDataFromStorage();
     if (typeof window.loadUserGroupsDataFromStorage === 'function') window.loadUserGroupsDataFromStorage();
     if (typeof window.loadAttendanceDataFromStorage === 'function') window.loadAttendanceDataFromStorage();
+    if (typeof window.loadMarksheetDataFromStorage === 'function') window.loadMarksheetDataFromStorage();
     loadFeelgoodMessagesFromJson();
 
     const isSecretPresetTriggered = (typeof window.checkUrlForSecretPreset === 'function') 
@@ -194,6 +197,7 @@
     if (typeof window.setupViewNavigation === 'function') window.setupViewNavigation();
     if (typeof window.setupGlimpseEventListeners === 'function') window.setupGlimpseEventListeners();
     if (typeof window.setupAttendanceEventListeners === 'function') window.setupAttendanceEventListeners();
+    if (typeof window.setupMarksheetEventListeners === 'function') window.setupMarksheetEventListeners();
     if (typeof window.setupUserGroupsEventListeners === 'function') window.setupUserGroupsEventListeners();
     if (typeof window.setupClassesEventListeners === 'function') window.setupClassesEventListeners();
     if (typeof window.setupBackupSecretFeature === 'function') window.setupBackupSecretFeature();

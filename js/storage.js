@@ -5,7 +5,7 @@
   // ─────────────────────────────────────────────────────────────────────────
   // DATABASE SCHEMA VERSION & DATA MIGRATION ENGINE
   // ─────────────────────────────────────────────────────────────────────────
-  const CURRENT_DB_SCHEMA_VERSION = 'V08';
+  const CURRENT_DB_SCHEMA_VERSION = 'V10';
 
   /**
    * Parses schema version string into a comparable integer.
@@ -528,6 +528,154 @@
 
           if (modified) {
             storage.setJson('glimpse_classes_data_v1', classesData);
+          }
+        }
+      }
+    },
+    {
+      version: 'V09',
+      versionNum: 9,
+      description: 'Initialize and normalize Mark Sheet entries collection (glimpse_marksheet_data_v1).',
+      migrate: (storage) => {
+        let msData = storage.getJson('glimpse_marksheet_data_v1', null);
+        if (!msData || typeof msData !== 'object' || !Array.isArray(msData.entries)) {
+          msData = { entries: [] };
+        } else {
+          msData.entries = msData.entries.map(e => ({
+            id: e.id || `ms_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            title: typeof e.title === 'string' ? e.title : 'Assessment',
+            date: typeof e.date === 'string' ? e.date : new Date().toISOString().slice(0, 10),
+            term: typeof e.term === 'string' ? e.term : 'General',
+            classId: typeof e.classId === 'string' ? e.classId : null,
+            className: typeof e.className === 'string' ? e.className : '',
+            groupId: typeof e.groupId === 'string' ? e.groupId : null,
+            groupName: typeof e.groupName === 'string' ? e.groupName : '',
+            subjects: Array.isArray(e.subjects) ? e.subjects.map(s => ({
+              id: s.id || `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              name: typeof s.name === 'string' ? s.name : 'Subject',
+              icon: typeof s.icon === 'string' ? s.icon : '📖',
+              maxMarks: typeof s.maxMarks === 'number' && s.maxMarks > 0 ? s.maxMarks : 100,
+              passMarks: typeof s.passMarks === 'number' && s.passMarks >= 0 ? s.passMarks : 35
+            })) : [],
+            students: Array.isArray(e.students) ? e.students.map(st => ({
+              id: st.id || `mem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              rollNo: st.rollNo !== undefined ? String(st.rollNo) : '',
+              name: typeof st.name === 'string' ? st.name : 'Student',
+              marks: (st.marks && typeof st.marks === 'object') ? st.marks : {},
+              remarks: typeof st.remarks === 'string' ? st.remarks : ''
+            })) : [],
+            createdAt: e.createdAt || new Date().toISOString(),
+            updatedAt: e.updatedAt || new Date().toISOString()
+          }));
+        }
+        storage.setJson('glimpse_marksheet_data_v1', msData);
+      }
+    },
+    {
+      version: 'V10',
+      versionNum: 10,
+      description: 'Concatenate subject suffix into subject name, clean up obsolete subject properties, and ensure class-assigned student groups and mark sheet entries are synchronized.',
+      migrate: (storage) => {
+        // 1. User Groups collection
+        const groupsData = storage.getJson('glimpse_user_groups_data_v1', null);
+        const allGroups = (groupsData && Array.isArray(groupsData.groups)) ? groupsData.groups : [];
+
+        // 2. Classes collection (glimpse_classes_data_v1)
+        const classesData = storage.getJson('glimpse_classes_data_v1', null);
+        if (classesData && Array.isArray(classesData.classes)) {
+          classesData.classes.forEach(c => {
+            if (Array.isArray(c.subjects)) {
+              c.subjects = c.subjects.map(s => {
+                const rawName = typeof s.name === 'string' ? s.name.trim() : 'Untitled';
+                const rawSuffix = typeof s.suffix === 'string' ? s.suffix.trim() : '';
+                const iconVal = (typeof s.icon === 'string' && s.icon.trim()) ? s.icon : ((typeof s.emoji === 'string' && s.emoji.trim()) ? s.emoji : '📖');
+                const combinedName = rawSuffix ? `${rawName} ${rawSuffix}`.trim() : rawName;
+
+                return {
+                  id: s.id || `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                  name: combinedName,
+                  icon: iconVal,
+                  emoji: iconVal,
+                  badge: typeof s.badge === 'string' ? s.badge : '🟦'
+                };
+              });
+            }
+
+            // Standardize assignedGroupIds array
+            if (!Array.isArray(c.assignedGroupIds)) {
+              if (c.assignedGroupId && typeof c.assignedGroupId === 'string' && c.assignedGroupId.trim()) {
+                c.assignedGroupIds = [c.assignedGroupId.trim()];
+              } else {
+                c.assignedGroupIds = [];
+              }
+            }
+            c.assignedGroupId = c.assignedGroupIds.length > 0 ? c.assignedGroupIds[0] : null;
+          });
+          storage.setJson('glimpse_classes_data_v1', classesData);
+        }
+
+        // 3. Legacy Subjects collection (glimpse_subjects_v10)
+        const subjectsData = storage.getJson('glimpse_subjects_v10', null);
+        if (Array.isArray(subjectsData)) {
+          const cleanSubjects = subjectsData.map(s => {
+            const rawName = typeof s.name === 'string' ? s.name.trim() : 'Untitled';
+            const rawSuffix = typeof s.suffix === 'string' ? s.suffix.trim() : '';
+            const iconVal = (typeof s.icon === 'string' && s.icon.trim()) ? s.icon : ((typeof s.emoji === 'string' && s.emoji.trim()) ? s.emoji : '📖');
+            const combinedName = rawSuffix ? `${rawName} ${rawSuffix}`.trim() : rawName;
+
+            return {
+              id: s.id || `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              name: combinedName,
+              icon: iconVal,
+              emoji: iconVal,
+              badge: typeof s.badge === 'string' ? s.badge : '🟦'
+            };
+          });
+          storage.setJson('glimpse_subjects_v10', cleanSubjects);
+        }
+
+        // 4. Mark Sheet collection (glimpse_marksheet_data_v1)
+        const msData = storage.getJson('glimpse_marksheet_data_v1', null);
+        if (msData && Array.isArray(msData.entries)) {
+          const allClasses = (classesData && Array.isArray(classesData.classes)) ? classesData.classes : [];
+          let modified = false;
+          msData.entries.forEach(e => {
+            if (Array.isArray(e.subjects)) {
+              e.subjects = e.subjects.map(s => {
+                const rawName = typeof s.name === 'string' ? s.name.trim() : 'Subject';
+                const rawSuffix = typeof s.suffix === 'string' ? s.suffix.trim() : '';
+                const iconVal = typeof s.icon === 'string' ? s.icon : '📖';
+                const combinedName = rawSuffix ? `${rawName} ${rawSuffix}`.trim() : rawName;
+
+                return {
+                  id: s.id || `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                  name: combinedName,
+                  icon: iconVal,
+                  maxMarks: typeof s.maxMarks === 'number' && s.maxMarks > 0 ? s.maxMarks : 100,
+                  passMarks: typeof s.passMarks === 'number' && s.passMarks >= 0 ? s.passMarks : 35
+                };
+              });
+              modified = true;
+            }
+
+            // Sync Class and Group association
+            const matchedClass = allClasses.find(c => c.id === e.classId);
+            if (matchedClass) {
+              e.className = matchedClass.name;
+              if (!e.groupId && matchedClass.assignedGroupId) {
+                e.groupId = matchedClass.assignedGroupId;
+                modified = true;
+              }
+            }
+            if (e.groupId) {
+              const matchedGroup = allGroups.find(g => g.id === e.groupId);
+              if (matchedGroup) {
+                e.groupName = matchedGroup.name;
+              }
+            }
+          });
+          if (modified) {
+            storage.setJson('glimpse_marksheet_data_v1', msData);
           }
         }
       }
