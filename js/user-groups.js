@@ -158,7 +158,9 @@
     if (!userGroupsData.groups || userGroupsData.groups.length === 0) {
       container.innerHTML = `
         <div class="att-empty-state">
-          <div class="att-empty-icon">👥</div>
+          <div class="att-empty-icon">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--meta);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
           <h3>No User Groups Found</h3>
           <p>Create your first user group to start managing members and rosters.</p>
           <button id="ugEmptyCreateBtn" class="btn btn-primary btn-sm">+ Create User Group</button>
@@ -246,7 +248,12 @@
           : [];
 
         const syncedClasses = (window.classesData && Array.isArray(window.classesData.classes))
-          ? window.classesData.classes.filter(c => c.assignedGroupId === gId)
+          ? window.classesData.classes.filter(c => {
+              if (Array.isArray(c.assignedGroupIds)) {
+                return c.assignedGroupIds.includes(gId);
+              }
+              return c.assignedGroupId === gId;
+            })
           : [];
 
         const isSynced = syncedPrograms.length > 0 || syncedClasses.length > 0;
@@ -286,8 +293,13 @@
           if (window.classesData && Array.isArray(window.classesData.classes)) {
             let clsChanged = false;
             window.classesData.classes.forEach(c => {
-              if (c.assignedGroupId === gId) {
+              if (Array.isArray(c.assignedGroupIds) && c.assignedGroupIds.includes(gId)) {
+                c.assignedGroupIds = c.assignedGroupIds.filter(id => id !== gId);
+                c.assignedGroupId = c.assignedGroupIds.length > 0 ? c.assignedGroupIds[0] : null;
+                clsChanged = true;
+              } else if (c.assignedGroupId === gId) {
                 c.assignedGroupId = null;
+                c.assignedGroupIds = [];
                 clsChanged = true;
               }
             });

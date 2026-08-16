@@ -486,7 +486,9 @@
     if (!attendanceData.programs || attendanceData.programs.length === 0) {
       container.innerHTML = `
         <div class="att-empty-state">
-          <div class="att-empty-icon">📁</div>
+          <div class="att-empty-icon">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--meta);"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><polyline points="9 14 11 16 15 11"></polyline></svg>
+          </div>
           <h3>No Programs Found</h3>
           <p>Create your first program to start tracking attendance for your class or group.</p>
           <button id="attEmptyCreateBtn" class="btn btn-primary btn-sm">+ Create Program</button>
@@ -1378,19 +1380,21 @@
     const headerHeight = (table && table.querySelector('thead tr')) ? Math.ceil(table.querySelector('thead tr').getBoundingClientRect().height) : 48;
     const width = columnWidths.reduce((sum, w) => sum + w, 0);
     const height = headerHeight + rowHeights.reduce((sum, h) => sum + h, 0);
+    const dpr = 2;
     const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
     const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
 
     const surface = rootStyles.getPropertyValue('--surface').trim() || '#ffffff';
     const surfaceWarm = rootStyles.getPropertyValue('--surface-warm').trim() || '#f4f4f4';
     const border = rootStyles.getPropertyValue('--border-soft').trim() || '#dddddd';
     const borderStrong = rootStyles.getPropertyValue('--border').trim() || '#cccccc';
-    const fg = rootStyles.getPropertyValue('--fg').trim() || '#1f1f1f';
-    const muted = rootStyles.getPropertyValue('--muted').trim() || '#6f6f6f';
-    const presentColor = rootStyles.getPropertyValue('--success').trim() || '#12b981';
-    const absentColor = rootStyles.getPropertyValue('--danger').trim() || '#ef4444';
+    const fg = rootStyles.getPropertyValue('--fg').trim() || '#211922';
+    const muted = rootStyles.getPropertyValue('--muted').trim() || '#62625b';
+    const presentColor = rootStyles.getPropertyValue('--success-light').trim() || '#10b981';
+    const absentColor = rootStyles.getPropertyValue('--danger-light').trim() || '#ef4444';
     const fontFamily = rootStyles.getPropertyValue('--font-body').trim() || 'Arial, sans-serif';
 
     ctx.fillStyle = surface;
@@ -1438,7 +1442,7 @@
         drawCell(x, y, w, h, surface);
         if (status === 'Present' || status === 'Absent') {
           ctx.beginPath();
-          ctx.arc(x + w / 2, y + h / 2, 8, 0, Math.PI * 2);
+          ctx.arc(x + w / 2, y + h / 2, 8.5, 0, Math.PI * 2);
           ctx.fillStyle = status === 'Present' ? presentColor : absentColor;
           ctx.fill();
         } else {

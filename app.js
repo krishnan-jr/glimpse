@@ -6,21 +6,21 @@
   const SUN_SVG = `<svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>`;
   const MOON_SVG = `<svg viewBox="0 0 24 24"><path d="M12.3 2C6.5 2 1.8 6.7 1.8 12.5S6.5 23 12.3 23c4.8 0 8.8-3.2 10.1-7.7-.6.2-1.3.3-2 .3-5.2 0-9.5-4.3-9.5-9.5 0-1.4.3-2.7.8-3.9-1.3-.2-2.5-.2-3.7-.2z"/></svg>`;
 
-  let isDarkMode = true;
+  let isDarkMode = false;
 
   function setupTheme() {
     const savedTheme = localStorage.getItem('glimpse_theme');
-    isDarkMode = savedTheme !== 'light';
+    isDarkMode = savedTheme === 'dark';
 
     const themeSpans = document.querySelectorAll('.theme-icon-span');
     const themeIcon = document.getElementById('themeIcon');
 
     if (isDarkMode) {
-      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', 'dark');
       themeSpans.forEach(span => { span.innerHTML = SUN_SVG; });
       if (themeIcon) themeIcon.innerHTML = SUN_SVG;
     } else {
-      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.removeAttribute('data-theme');
       themeSpans.forEach(span => { span.innerHTML = MOON_SVG; });
       if (themeIcon) themeIcon.innerHTML = MOON_SVG;
     }
@@ -31,6 +31,15 @@
     localStorage.setItem('glimpse_theme', isDarkMode ? 'dark' : 'light');
     setupTheme();
   }
+
+  // Global delegated theme toggle event handler
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.theme-toggle-btn');
+    if (btn) {
+      e.preventDefault();
+      toggleTheme();
+    }
+  });
 
   // --- PWA SERVICE WORKER & INSTALL PROMPT ---
   let deferredInstallPrompt = null;

@@ -5,7 +5,7 @@
   // ─────────────────────────────────────────────────────────────────────────
   // DATABASE SCHEMA VERSION & DATA MIGRATION ENGINE
   // ─────────────────────────────────────────────────────────────────────────
-  const CURRENT_DB_SCHEMA_VERSION = 'V07';
+  const CURRENT_DB_SCHEMA_VERSION = 'V08';
 
   /**
    * Parses schema version string into a comparable integer.
@@ -490,6 +490,40 @@
               c.assignedGroupId = null;
               modified = true;
             }
+          });
+
+          if (modified) {
+            storage.setJson('glimpse_classes_data_v1', classesData);
+          }
+        }
+      }
+    },
+    {
+      version: 'V08',
+      versionNum: 8,
+      description: 'Support multiple User Group direct assignments on Classes (assignedGroupIds array) with live synchronization.',
+      migrate: (storage) => {
+        const classesData = storage.getJson('glimpse_classes_data_v1', null);
+        const ugData = storage.getJson('glimpse_user_groups_data_v1', null);
+        const groups = (ugData && Array.isArray(ugData.groups)) ? ugData.groups : [];
+
+        if (classesData && Array.isArray(classesData.classes)) {
+          let modified = false;
+          classesData.classes.forEach(c => {
+            let groupIds = [];
+            if (Array.isArray(c.assignedGroupIds)) {
+              groupIds = c.assignedGroupIds.map(id => String(id).trim()).filter(Boolean);
+            } else if (c.assignedGroupId && typeof c.assignedGroupId === 'string' && c.assignedGroupId.trim()) {
+              groupIds = [c.assignedGroupId.trim()];
+            }
+            // Filter to only groups that actually exist in ugData
+            const validGroupIds = groupIds.filter(id => groups.some(g => g.id === id));
+            // Remove duplicates
+            const uniqueGroupIds = Array.from(new Set(validGroupIds));
+
+            c.assignedGroupIds = uniqueGroupIds;
+            c.assignedGroupId = uniqueGroupIds.length > 0 ? uniqueGroupIds[0] : null;
+            modified = true;
           });
 
           if (modified) {

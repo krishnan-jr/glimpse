@@ -35,9 +35,14 @@
         initializeDefaultClass();
       } else {
         classesData.classes.forEach(c => {
-          if (c.assignedGroupId === undefined) {
-            c.assignedGroupId = null;
+          if (!Array.isArray(c.assignedGroupIds)) {
+            if (c.assignedGroupId && typeof c.assignedGroupId === 'string' && c.assignedGroupId.trim()) {
+              c.assignedGroupIds = [c.assignedGroupId.trim()];
+            } else {
+              c.assignedGroupIds = [];
+            }
           }
+          c.assignedGroupId = c.assignedGroupIds.length > 0 ? c.assignedGroupIds[0] : null;
         });
       }
 
@@ -74,6 +79,7 @@
       name: defaultName,
       description: `Class ${defaultName}`,
       isActive: true,
+      assignedGroupIds: [],
       assignedGroupId: null,
       subjects: defaultSubjects,
       timetable: defaultTimetable,
@@ -84,6 +90,49 @@
     classesData.classes = [newClass];
     classesData.activeClassId = newClass.id;
     saveClassesDataToStorage();
+  }
+
+  /**
+   * Returns merged student roster and assigned groups for a given class.
+   */
+  function getMergedClassRoster(cls) {
+    if (!cls) return { groups: [], allMembers: [], totalCount: 0 };
+    if (typeof window.loadUserGroupsDataFromStorage === 'function') {
+      window.loadUserGroupsDataFromStorage();
+    }
+    const allGroups = (window.userGroupsData && Array.isArray(window.userGroupsData.groups)) ? window.userGroupsData.groups : [];
+    
+    let groupIds = [];
+    if (Array.isArray(cls.assignedGroupIds)) {
+      groupIds = cls.assignedGroupIds;
+    } else if (cls.assignedGroupId) {
+      groupIds = [cls.assignedGroupId];
+    }
+
+    const assignedGroups = groupIds.map(id => allGroups.find(g => g.id === id)).filter(Boolean);
+    
+    const allMembers = [];
+    let memberCounter = 1;
+    assignedGroups.forEach(g => {
+      if (Array.isArray(g.members)) {
+        g.members.forEach(m => {
+          allMembers.push({
+            id: m.id,
+            rollNo: m.rollNo || memberCounter,
+            name: m.name,
+            groupId: g.id,
+            groupName: g.name
+          });
+          memberCounter++;
+        });
+      }
+    });
+
+    return {
+      groups: assignedGroups,
+      allMembers,
+      totalCount: allMembers.length
+    };
   }
 
   let isSyncingToLegacy = false;
@@ -223,7 +272,9 @@
     if (!classesData.classes || classesData.classes.length === 0) {
       listEl.innerHTML = `
         <div class="att-empty-state">
-          <div class="att-empty-icon">🏫</div>
+          <div class="att-empty-icon">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--meta);"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          </div>
           <h3>No Classes Found</h3>
           <p>Create your first class to maintain subjects and weekly period timetables.</p>
           <button type="button" id="clsEmptyCreateBtn" class="btn btn-primary btn-sm">+ Create Class</button>
@@ -247,9 +298,26 @@
         });
       }
 
-      let assignedGroup = null;
-      if (cls.assignedGroupId && window.userGroupsData && Array.isArray(window.userGroupsData.groups)) {
-        assignedGroup = window.userGroupsData.groups.find(g => g.id === cls.assignedGroupId);
+      const mergedRoster = getMergedClassRoster(cls);
+      const groups = mergedRoster.groups;
+      let groupsHtml = '';
+      if (groups.length === 1) {
+        groupsHtml = `
+          <span class="att-meta-chip" title="Assigned User Group: ${window.escapeHtml(groups[0].name)}">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); flex-shrink: 0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <strong>${window.escapeHtml(groups[0].name)}</strong>
+          </span>
+          <span class="att-meta-divider"></span>
+        `;
+      } else if (groups.length > 1) {
+        const groupNames = groups.map(g => g.name).join(', ');
+        groupsHtml = `
+          <span class="att-meta-chip" title="Assigned Groups: ${window.escapeHtml(groupNames)}">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); flex-shrink: 0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <strong>${groups.length} Groups</strong>
+          </span>
+          <span class="att-meta-divider"></span>
+        `;
       }
 
       return `
@@ -268,18 +336,10 @@
           </div>
 
           <div class="att-card-meta-bar">
-            ${assignedGroup ? `
-              <span class="att-meta-chip" title="Assigned User Group: ${window.escapeHtml(assignedGroup.name)}">
-                <span style="color: var(--accent);">👥</span>
-                <strong>${window.escapeHtml(assignedGroup.name)}</strong>
-                <span style="color: var(--muted); font-size: 11px;">(${Array.isArray(assignedGroup.members) ? assignedGroup.members.length : 0})</span>
-              </span>
-              <span class="att-meta-divider"></span>
-            ` : ''}
+            ${groupsHtml}
             <span class="att-meta-chip"><strong>${subjectCount}</strong> ${subjectCount === 1 ? 'Subject' : 'Subjects'}</span>
             <span class="att-meta-divider"></span>
             <span class="att-meta-chip"><strong>${totalPeriods}</strong> ${totalPeriods === 1 ? 'Period' : 'Periods'}/Wk</span>
-            <span class="att-meta-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span>
           </div>
 
           <div class="att-card-footer">
@@ -293,6 +353,7 @@
                 <span>Delete</span>
               </button>
             </div>
+            <span class="att-meta-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span>
           </div>
         </div>
       `;
@@ -345,7 +406,7 @@
     renderClsClassesList();
 
     if (typeof window.showToast === 'function') {
-      window.showToast(cls.isActive ? `Class "${cls.name}" activated ✓` : `Class "${cls.name}" archived / made inactive 📦`);
+      window.showToast(cls.isActive ? `Class "${cls.name}" activated` : `Class "${cls.name}" archived / set inactive`);
     }
   }
 
@@ -390,31 +451,29 @@
     const editIdInput = document.getElementById('clsEditClassId');
     const nameInput = document.getElementById('clsClassName');
     const descInput = document.getElementById('clsClassDesc');
-    const assignedGroupSelect = document.getElementById('clsAssignedGroup');
+    const checklistContainer = document.getElementById('clsAssignedGroupsChecklist');
 
-    // Populate assigned user group dropdown options
-    if (assignedGroupSelect) {
-      if (typeof window.loadUserGroupsDataFromStorage === 'function') {
-        window.loadUserGroupsDataFromStorage();
-      }
-      const groups = (window.userGroupsData && Array.isArray(window.userGroupsData.groups)) ? window.userGroupsData.groups : [];
-      let opts = '<option value="">-- No User Group Assigned --</option>';
-      groups.forEach(g => {
-        const count = Array.isArray(g.members) ? g.members.length : 0;
-        opts += `<option value="${g.id}">👥 ${window.escapeHtml(g.name)} (${count} ${count === 1 ? 'member' : 'members'})</option>`;
-      });
-      assignedGroupSelect.innerHTML = opts;
+    if (typeof window.loadUserGroupsDataFromStorage === 'function') {
+      window.loadUserGroupsDataFromStorage();
     }
+    const groups = (window.userGroupsData && Array.isArray(window.userGroupsData.groups)) ? window.userGroupsData.groups : [];
+
+    let assignedGroupIds = [];
 
     if (classId) {
       const cls = getClassById(classId);
       if (!cls) return;
 
+      if (Array.isArray(cls.assignedGroupIds)) {
+        assignedGroupIds = cls.assignedGroupIds;
+      } else if (cls.assignedGroupId) {
+        assignedGroupIds = [cls.assignedGroupId];
+      }
+
       if (formTitle) formTitle.textContent = `Edit Class: ${cls.name}`;
       if (editIdInput) editIdInput.value = cls.id;
       if (nameInput) nameInput.value = cls.name || '';
       if (descInput) descInput.value = cls.description || '';
-      if (assignedGroupSelect) assignedGroupSelect.value = cls.assignedGroupId || '';
 
       clsDraftSubjects = JSON.parse(JSON.stringify(cls.subjects || []));
       clsDraftTimetable = JSON.parse(JSON.stringify(cls.timetable || {}));
@@ -423,10 +482,30 @@
       if (editIdInput) editIdInput.value = '';
       if (nameInput) nameInput.value = '';
       if (descInput) descInput.value = '';
-      if (assignedGroupSelect) assignedGroupSelect.value = '';
 
       clsDraftSubjects = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_SUBJECTS || []));
       clsDraftTimetable = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_TIMETABLE || {}));
+    }
+
+    // Populate user groups checklist
+    if (checklistContainer) {
+      if (groups.length === 0) {
+        checklistContainer.innerHTML = '<div style="color: var(--muted); font-size: var(--text-xs); padding: 8px;">No user groups available. Create groups in User Groups to link them here.</div>';
+      } else {
+        checklistContainer.innerHTML = groups.map(g => {
+          const isChecked = assignedGroupIds.includes(g.id) ? 'checked' : '';
+          const count = Array.isArray(g.members) ? g.members.length : 0;
+          return `
+            <label class="cls-group-checkbox-item">
+              <input type="checkbox" name="clsAssignedGroupCheckbox" value="${g.id}" ${isChecked}>
+              <span class="group-checkbox-label">
+                <strong>${window.escapeHtml(g.name)}</strong>
+                <span class="group-count">(${count} ${count === 1 ? 'member' : 'members'})</span>
+              </span>
+            </label>
+          `;
+        }).join('');
+      }
     }
 
     renderClsDraftSubjectsList();
@@ -673,10 +752,12 @@
     const timetablePane = document.getElementById('clsWorkspaceTabTimetable');
     const subjectsPane = document.getElementById('clsWorkspaceTabSubjects');
     const rosterPane = document.getElementById('clsWorkspaceTabRoster');
+    const daySelectorRow = document.getElementById('clsDaySelectorRow');
 
     if (timetablePane) timetablePane.style.display = tabKey === 'timetable' ? '' : 'none';
     if (subjectsPane) subjectsPane.style.display = tabKey === 'subjects' ? '' : 'none';
     if (rosterPane) rosterPane.style.display = tabKey === 'roster' ? '' : 'none';
+    if (daySelectorRow) daySelectorRow.style.display = tabKey === 'timetable' ? '' : 'none';
   }
 
   function renderClsUserGroupTab() {
@@ -684,58 +765,69 @@
     const cls = getClassById(clsCurrentTimetableClassId);
     if (!cls) return;
 
-    const bannerEl = document.getElementById('clsAssignedUgBanner');
+    if (!Array.isArray(cls.assignedGroupIds)) {
+      cls.assignedGroupIds = cls.assignedGroupId ? [cls.assignedGroupId] : [];
+    }
+
+    const listContainer = document.getElementById('clsAssignedUgListContainer');
     const unassignedCard = document.getElementById('clsUnassignedUgCard');
-    const ugNameEl = document.getElementById('clsAssignedUgName');
-    const ugCountEl = document.getElementById('clsAssignedUgMemberCount');
+    const inlineGroupSelect = document.getElementById('clsInlineAssignedGroup');
+    const countBadge = document.getElementById('clsAssignedUgCountBadge');
+    const matrixGroupsCount = document.getElementById('clsMatrixGroupsCount');
     const rosterPreviewContainer = document.getElementById('clsRosterPreviewContainer');
     const rosterPreviewList = document.getElementById('clsRosterPreviewList');
-    const inlineGroupSelect = document.getElementById('clsInlineAssignedGroup');
+    const combinedCountEl = document.getElementById('clsCombinedRosterCount');
 
     if (typeof window.loadUserGroupsDataFromStorage === 'function') {
       window.loadUserGroupsDataFromStorage();
     }
-    const groups = (window.userGroupsData && Array.isArray(window.userGroupsData.groups)) ? window.userGroupsData.groups : [];
+    const allGroups = (window.userGroupsData && Array.isArray(window.userGroupsData.groups)) ? window.userGroupsData.groups : [];
 
-    // Populate inline select
+    const merged = getMergedClassRoster(cls);
+    const assignedGroups = merged.groups;
+
+    if (countBadge) countBadge.textContent = assignedGroups.length;
+    if (matrixGroupsCount) matrixGroupsCount.textContent = assignedGroups.length;
+    if (combinedCountEl) combinedCountEl.textContent = merged.totalCount;
+
+    // Populate dropdown with groups that are NOT yet assigned
     if (inlineGroupSelect) {
-      let opts = '<option value="">-- Select User Group --</option>';
-      groups.forEach(g => {
+      const availableGroups = allGroups.filter(g => !cls.assignedGroupIds.includes(g.id));
+      let opts = '<option value="">-- Add User Group to Class --</option>';
+      availableGroups.forEach(g => {
         const count = Array.isArray(g.members) ? g.members.length : 0;
-        const selected = g.id === cls.assignedGroupId ? 'selected' : '';
-        opts += `<option value="${g.id}" ${selected}>👥 ${window.escapeHtml(g.name)} (${count} ${count === 1 ? 'member' : 'members'})</option>`;
+        opts += `<option value="${g.id}">👥 ${window.escapeHtml(g.name)} (${count} ${count === 1 ? 'member' : 'members'})</option>`;
       });
       inlineGroupSelect.innerHTML = opts;
     }
 
-    const assignedGroup = cls.assignedGroupId ? groups.find(g => g.id === cls.assignedGroupId) : null;
-
-    if (assignedGroup) {
-      if (bannerEl) bannerEl.style.display = 'flex';
-      if (unassignedCard) unassignedCard.style.display = 'none';
-      if (ugNameEl) ugNameEl.textContent = assignedGroup.name;
-      if (ugCountEl) ugCountEl.textContent = Array.isArray(assignedGroup.members) ? assignedGroup.members.length : 0;
-
-      if (rosterPreviewContainer) rosterPreviewContainer.style.display = 'block';
-      if (rosterPreviewList) {
-        const members = Array.isArray(assignedGroup.members) ? assignedGroup.members : [];
-        if (members.length === 0) {
-          rosterPreviewList.innerHTML = '<div style="color: var(--muted); font-size: var(--text-xs); padding: 8px;">No members in this group yet. Add members in User Groups.</div>';
-        } else {
-          rosterPreviewList.innerHTML = members.map((m, idx) => {
-            const rollNo = m.rollNo || (idx + 1);
-            return `
-              <div class="att-participant-card" style="padding: 8px 12px; display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);">
-                <span class="att-roll-badge" style="font-weight: 700; font-size: 11px; color: var(--accent); background: rgba(230,0,35,0.08); padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">#${rollNo}</span>
-                <span style="font-weight: 500; font-size: var(--text-sm); color: var(--fg);">${window.escapeHtml(m.name)}</span>
+    if (assignedGroups.length > 0) {
+      if (listContainer) {
+        listContainer.style.display = 'flex';
+        listContainer.innerHTML = assignedGroups.map(g => {
+          const count = Array.isArray(g.members) ? g.members.length : 0;
+          return `
+            <div class="cls-assigned-ug-card" data-group-id="${g.id}">
+              <div class="assigned-ug-info">
+                <span class="sync-icon">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </span>
+                <div>
+                  <div style="font-weight: 600; font-size: var(--text-sm); color: var(--fg); margin-bottom: 2px;">${window.escapeHtml(g.name)}</div>
+                  <span style="font-size: var(--text-xs); color: var(--muted); font-weight: 500;">${count} ${count === 1 ? 'member' : 'members'} • Live Sync</span>
+                </div>
               </div>
-            `;
-          }).join('');
-        }
+              <button type="button" class="btn btn-secondary btn-sm cls-unlink-single-ug-btn" data-group-id="${g.id}" style="color: var(--danger); gap: 6px; font-weight: 600;" title="Unlink ${window.escapeHtml(g.name)} from class">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+                <span>Unlink</span>
+              </button>
+            </div>
+          `;
+        }).join('');
       }
+      if (unassignedCard) unassignedCard.style.display = 'none';
     } else {
-      if (bannerEl) bannerEl.style.display = 'none';
-      if (rosterPreviewContainer) rosterPreviewContainer.style.display = 'none';
+      if (listContainer) listContainer.style.display = 'none';
       if (unassignedCard) unassignedCard.style.display = 'block';
     }
   }
@@ -749,15 +841,17 @@
     const descEl = document.getElementById('clsTimetableClassDesc');
     if (titleEl) titleEl.textContent = `${cls.name} Class Workspace`;
     
-    let assignedGroupName = '';
-    if (cls.assignedGroupId && window.userGroupsData && Array.isArray(window.userGroupsData.groups)) {
-      const g = window.userGroupsData.groups.find(group => group.id === cls.assignedGroupId);
-      if (g) assignedGroupName = g.name;
+    const merged = getMergedClassRoster(cls);
+    let assignedInfo = '';
+    if (merged.groups.length === 1) {
+      assignedInfo = ` • ${merged.groups[0].name}`;
+    } else if (merged.groups.length > 1) {
+      assignedInfo = ` • ${merged.groups.length} User Groups`;
     }
 
     if (descEl) {
-      descEl.textContent = assignedGroupName 
-        ? `Weekly schedule & subjects • 👥 ${assignedGroupName}` 
+      descEl.textContent = assignedInfo 
+        ? `Weekly schedule & subjects${assignedInfo}` 
         : (cls.description || 'Configure timetable, subjects & student roster');
     }
 
@@ -794,24 +888,19 @@
     const isActive = cls.isActive !== false;
 
     if (isActive) {
+      toggleStatusBtn.className = 'btn btn-status-active btn-sm';
       toggleStatusBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;">
-          <polyline points="21 8 21 21 3 21 3 8"></polyline>
-          <rect x="1" y="3" width="22" height="5"></rect>
-          <line x1="10" y1="12" x2="14" y2="12"></line>
-        </svg>
-        <span>Inactive</span>
-      `;
-      toggleStatusBtn.title = 'Archive / Set class as inactive';
-    } else {
-      toggleStatusBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
+        <span class="status-indicator-dot active"></span>
         <span>Active</span>
       `;
-      toggleStatusBtn.title = 'Activate class';
+      toggleStatusBtn.title = 'Click to archive / set class as inactive';
+    } else {
+      toggleStatusBtn.className = 'btn btn-status-inactive btn-sm';
+      toggleStatusBtn.innerHTML = `
+        <span class="status-indicator-dot inactive"></span>
+        <span>Archived</span>
+      `;
+      toggleStatusBtn.title = 'Click to activate class';
     }
   }
 
@@ -906,14 +995,18 @@
   }
 
   // --- FORM SNAPSHOT & DIRTY DETECTION ---
+  function getSelectedFormGroupIds() {
+    const checkboxes = document.querySelectorAll('input[name="clsAssignedGroupCheckbox"]:checked');
+    return Array.from(checkboxes).map(cb => cb.value).sort();
+  }
+
   function takeClsInitialFormSnapshot() {
     const nameInput = document.getElementById('clsClassName');
     const descInput = document.getElementById('clsClassDesc');
-    const assignedGroupSelect = document.getElementById('clsAssignedGroup');
     clsInitialFormSnapshot = {
       name: nameInput ? nameInput.value.trim() : '',
       desc: descInput ? descInput.value.trim() : '',
-      assignedGroupId: assignedGroupSelect ? assignedGroupSelect.value : '',
+      assignedGroupIds: JSON.stringify(getSelectedFormGroupIds()),
       subjects: JSON.stringify(clsDraftSubjects)
     };
   }
@@ -922,16 +1015,15 @@
     if (!clsInitialFormSnapshot) return false;
     const nameInput = document.getElementById('clsClassName');
     const descInput = document.getElementById('clsClassDesc');
-    const assignedGroupSelect = document.getElementById('clsAssignedGroup');
     const currentName = nameInput ? nameInput.value.trim() : '';
     const currentDesc = descInput ? descInput.value.trim() : '';
-    const currentAssignedGroup = assignedGroupSelect ? assignedGroupSelect.value : '';
+    const currentGroupIds = JSON.stringify(getSelectedFormGroupIds());
     const currentSubjects = JSON.stringify(clsDraftSubjects);
 
     return (
       currentName !== clsInitialFormSnapshot.name ||
       currentDesc !== clsInitialFormSnapshot.desc ||
-      currentAssignedGroup !== clsInitialFormSnapshot.assignedGroupId ||
+      currentGroupIds !== clsInitialFormSnapshot.assignedGroupIds ||
       currentSubjects !== clsInitialFormSnapshot.subjects
     );
   }
@@ -1028,10 +1120,9 @@
         e.preventDefault();
         const nameInput = document.getElementById('clsClassName');
         const descInput = document.getElementById('clsClassDesc');
-        const assignedGroupSelect = document.getElementById('clsAssignedGroup');
         const name = nameInput ? nameInput.value.trim() : '';
         const desc = descInput ? descInput.value.trim() : '';
-        const assignedGroupId = assignedGroupSelect && assignedGroupSelect.value ? assignedGroupSelect.value : null;
+        const selectedGroupIds = getSelectedFormGroupIds();
 
         if (!name) return;
 
@@ -1040,7 +1131,8 @@
           if (cls) {
             cls.name = name;
             cls.description = desc;
-            cls.assignedGroupId = assignedGroupId;
+            cls.assignedGroupIds = selectedGroupIds;
+            cls.assignedGroupId = selectedGroupIds.length > 0 ? selectedGroupIds[0] : null;
             cls.subjects = JSON.parse(JSON.stringify(clsDraftSubjects));
             cls.updatedAt = new Date().toISOString();
           }
@@ -1051,7 +1143,8 @@
             name,
             description: desc,
             isActive: true,
-            assignedGroupId: assignedGroupId,
+            assignedGroupIds: selectedGroupIds,
+            assignedGroupId: selectedGroupIds.length > 0 ? selectedGroupIds[0] : null,
             subjects: JSON.parse(JSON.stringify(clsDraftSubjects)),
             timetable: JSON.parse(JSON.stringify(clsDraftTimetable || window.GENERIC_DEFAULT_TIMETABLE || {})),
             createdAt: new Date().toISOString(),
@@ -1095,13 +1188,17 @@
       });
     }
 
-    // User Group Assignment in Workspace
+    // User Group Assignment in Workspace (Add group to class)
     const inlineAssignBtn = document.getElementById('clsInlineAssignUgBtn');
     if (inlineAssignBtn) {
       inlineAssignBtn.addEventListener('click', () => {
         if (!clsCurrentTimetableClassId) return;
         const cls = getClassById(clsCurrentTimetableClassId);
         if (!cls) return;
+
+        if (!Array.isArray(cls.assignedGroupIds)) {
+          cls.assignedGroupIds = cls.assignedGroupId ? [cls.assignedGroupId] : [];
+        }
 
         const inlineSelect = document.getElementById('clsInlineAssignedGroup');
         const gId = inlineSelect ? inlineSelect.value : '';
@@ -1111,8 +1208,12 @@
           return;
         }
 
-        cls.assignedGroupId = gId;
+        if (!cls.assignedGroupIds.includes(gId)) {
+          cls.assignedGroupIds.push(gId);
+        }
+        cls.assignedGroupId = cls.assignedGroupIds[0] || null;
         cls.updatedAt = new Date().toISOString();
+
         saveClassesDataToStorage();
         renderClsUserGroupTab();
         renderClsClassesList();
@@ -1123,28 +1224,25 @@
       });
     }
 
-    const changeUgBtn = document.getElementById('clsChangeUgBtn');
-    if (changeUgBtn) {
-      changeUgBtn.addEventListener('click', () => {
-        const bannerEl = document.getElementById('clsAssignedUgBanner');
-        const unassignedCard = document.getElementById('clsUnassignedUgCard');
-        const rosterPreviewContainer = document.getElementById('clsRosterPreviewContainer');
-        if (bannerEl) bannerEl.style.display = 'none';
-        if (rosterPreviewContainer) rosterPreviewContainer.style.display = 'none';
-        if (unassignedCard) unassignedCard.style.display = 'block';
-      });
-    }
+    // Delegated Unlink Single Group button in Workspace
+    const tabRoster = document.getElementById('clsWorkspaceTabRoster');
+    if (tabRoster) {
+      tabRoster.addEventListener('click', async (e) => {
+        const unlinkBtn = e.target.closest('.cls-unlink-single-ug-btn');
+        if (!unlinkBtn || !clsCurrentTimetableClassId) return;
 
-    const unassignUgBtn = document.getElementById('clsUnassignUgBtn');
-    if (unassignUgBtn) {
-      unassignUgBtn.addEventListener('click', async () => {
-        if (!clsCurrentTimetableClassId) return;
         const cls = getClassById(clsCurrentTimetableClassId);
         if (!cls) return;
 
+        const gId = unlinkBtn.getAttribute('data-group-id');
+        if (!gId) return;
+
+        const group = (window.userGroupsData && window.userGroupsData.groups) ? window.userGroupsData.groups.find(g => g.id === gId) : null;
+        const gName = group ? group.name : 'this user group';
+
         const confirmed = await window.showConfirmDialog({
-          title: 'Unlink User Group?',
-          message: 'Are you sure you want to disconnect this class from its assigned User Group?',
+          title: `Unlink "${gName}"?`,
+          message: `Are you sure you want to disconnect "${gName}" from this class?`,
           confirmText: 'Unlink Group',
           cancelText: 'Cancel',
           isDanger: false
@@ -1152,12 +1250,18 @@
 
         if (!confirmed) return;
 
-        cls.assignedGroupId = null;
+        if (Array.isArray(cls.assignedGroupIds)) {
+          cls.assignedGroupIds = cls.assignedGroupIds.filter(id => id !== gId);
+        } else {
+          cls.assignedGroupIds = [];
+        }
+        cls.assignedGroupId = cls.assignedGroupIds.length > 0 ? cls.assignedGroupIds[0] : null;
         cls.updatedAt = new Date().toISOString();
+
         saveClassesDataToStorage();
         renderClsUserGroupTab();
         renderClsClassesList();
-        if (typeof window.showToast === 'function') window.showToast('User group unlinked from class');
+        if (typeof window.showToast === 'function') window.showToast(`Unlinked "${gName}" from class`);
       });
     }
   }
