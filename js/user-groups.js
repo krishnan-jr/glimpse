@@ -233,16 +233,83 @@
         const targetGroup = userGroupsData.groups.find(g => g.id === gId);
         if (!targetGroup) return;
 
+        // Ensure attendance data and classes data are loaded to check for active sync bindings
+        if ((!window.attendanceData || !window.attendanceData.programs) && typeof window.loadAttendanceDataFromStorage === 'function') {
+          window.loadAttendanceDataFromStorage();
+        }
+        if ((!window.classesData || !window.classesData.classes) && typeof window.loadClassesDataFromStorage === 'function') {
+          window.loadClassesDataFromStorage();
+        }
+
+        const syncedPrograms = (window.attendanceData && Array.isArray(window.attendanceData.programs))
+          ? window.attendanceData.programs.filter(p => p.assignedGroupId === gId)
+          : [];
+
+        const syncedClasses = (window.classesData && Array.isArray(window.classesData.classes))
+          ? window.classesData.classes.filter(c => c.assignedGroupId === gId)
+          : [];
+
+        const isSynced = syncedPrograms.length > 0 || syncedClasses.length > 0;
+
+        let dialogTitle = 'Delete User Group';
+        let dialogMessage = `Are you sure you want to delete "${targetGroup.name}"? This action cannot be undone.`;
+        let confirmBtnText = 'Delete Group';
+
+        if (isSynced) {
+          dialogTitle = 'Warning: Delete Synced Group?';
+          confirmBtnText = 'Delete & Unassign';
+
+          const syncItems = [];
+          if (syncedPrograms.length > 0) {
+            syncedPrograms.forEach(p => syncItems.push(`• Attendance Program: "${p.name}"`));
+          }
+          if (syncedClasses.length > 0) {
+            syncedClasses.forEach(c => syncItems.push(`• Class: "${c.name}"`));
+          }
+
+          dialogMessage = `WARNING: "${targetGroup.name}" is currently synced to the following item(s):\n\n${syncItems.join('\n')}\n\nDeleting this user group will permanently remove it and disconnect / unassign it from these linked items.\n\nAre you sure you want to proceed?`;
+        }
+
         const confirmed = await window.showConfirmDialog({
-          title: 'Delete User Group',
-          message: `Are you sure you want to delete "${targetGroup.name}"? This action cannot be undone.`,
-          confirmText: 'Delete Group',
-          cancelText: 'Cancel'
+          title: dialogTitle,
+          message: dialogMessage,
+          confirmText: confirmBtnText,
+          cancelText: 'Cancel',
+          isDanger: true
         });
 
         if (confirmed) {
           userGroupsData.groups = userGroupsData.groups.filter(g => g.id !== gId);
           saveUserGroupsDataToStorage();
+
+          // Unassign from any linked classes
+          if (window.classesData && Array.isArray(window.classesData.classes)) {
+            let clsChanged = false;
+            window.classesData.classes.forEach(c => {
+              if (c.assignedGroupId === gId) {
+                c.assignedGroupId = null;
+                clsChanged = true;
+              }
+            });
+            if (clsChanged && typeof window.saveClassesDataToStorage === 'function') {
+              window.saveClassesDataToStorage();
+            }
+          }
+
+          // Unassign from any linked attendance programs
+          if (window.attendanceData && Array.isArray(window.attendanceData.programs)) {
+            let attChanged = false;
+            window.attendanceData.programs.forEach(p => {
+              if (p.assignedGroupId === gId) {
+                p.assignedGroupId = null;
+                attChanged = true;
+              }
+            });
+            if (attChanged && typeof window.saveAttendanceDataToStorage === 'function') {
+              window.saveAttendanceDataToStorage();
+            }
+          }
+
           renderUgGroupsList();
           if (typeof window.showToast === 'function') window.showToast(`Deleted group: ${targetGroup.name}`);
         }

@@ -5,7 +5,7 @@
   // ─────────────────────────────────────────────────────────────────────────
   // DATABASE SCHEMA VERSION & DATA MIGRATION ENGINE
   // ─────────────────────────────────────────────────────────────────────────
-  const CURRENT_DB_SCHEMA_VERSION = 'V06';
+  const CURRENT_DB_SCHEMA_VERSION = 'V07';
 
   /**
    * Parses schema version string into a comparable integer.
@@ -436,6 +436,7 @@
             name: typeof c.name === 'string' ? c.name : 'Class',
             description: typeof c.description === 'string' ? c.description : '',
             isActive: c.isActive !== false,
+            assignedGroupId: (typeof c.assignedGroupId === 'string' && c.assignedGroupId.trim()) ? c.assignedGroupId.trim() : null,
             subjects: cSubjects,
             timetable: cTimetable,
             createdAt: c.createdAt || new Date().toISOString(),
@@ -460,6 +461,41 @@
         }
 
         storage.setJson('glimpse_classes_data_v1', classesData);
+      }
+    },
+    {
+      version: 'V07',
+      versionNum: 7,
+      description: 'Ensure Classes schema supports User Group direct assignment (assignedGroupId) and validate group linkage integrity.',
+      migrate: (storage) => {
+        const classesData = storage.getJson('glimpse_classes_data_v1', null);
+        const ugData = storage.getJson('glimpse_user_groups_data_v1', null);
+        const groups = (ugData && Array.isArray(ugData.groups)) ? ugData.groups : [];
+
+        if (classesData && Array.isArray(classesData.classes)) {
+          let modified = false;
+          classesData.classes.forEach(c => {
+            if (c.assignedGroupId === undefined) {
+              c.assignedGroupId = null;
+              modified = true;
+            } else if (typeof c.assignedGroupId === 'string' && c.assignedGroupId.trim() !== '') {
+              c.assignedGroupId = c.assignedGroupId.trim();
+              // Verify that the linked user group exists
+              const exists = groups.some(g => g.id === c.assignedGroupId);
+              if (!exists) {
+                c.assignedGroupId = null;
+                modified = true;
+              }
+            } else {
+              c.assignedGroupId = null;
+              modified = true;
+            }
+          });
+
+          if (modified) {
+            storage.setJson('glimpse_classes_data_v1', classesData);
+          }
+        }
       }
     }
   ];

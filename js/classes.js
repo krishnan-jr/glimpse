@@ -14,6 +14,7 @@
   let clsDraftTimetable = {};
   let clsSelectedTimetableDay = 'Monday';
   let clsTimetableViewMode = 'matrix'; // 'matrix' or 'day'
+  let clsActiveWorkspaceTab = 'timetable';
   let clsInitialFormSnapshot = null;
 
   // --- STORAGE HELPERS ---
@@ -32,6 +33,12 @@
       // If no classes exist, initialize with existing Glimpse data or default
       if (classesData.classes.length === 0) {
         initializeDefaultClass();
+      } else {
+        classesData.classes.forEach(c => {
+          if (c.assignedGroupId === undefined) {
+            c.assignedGroupId = null;
+          }
+        });
       }
 
       // Priority: check localStorage for last selected class in Glimpse
@@ -67,6 +74,7 @@
       name: defaultName,
       description: `Class ${defaultName}`,
       isActive: true,
+      assignedGroupId: null,
       subjects: defaultSubjects,
       timetable: defaultTimetable,
       createdAt: new Date().toISOString(),
@@ -239,6 +247,11 @@
         });
       }
 
+      let assignedGroup = null;
+      if (cls.assignedGroupId && window.userGroupsData && Array.isArray(window.userGroupsData.groups)) {
+        assignedGroup = window.userGroupsData.groups.find(g => g.id === cls.assignedGroupId);
+      }
+
       return `
         <div class="att-program-card ${isActive ? '' : 'inactive-class-card'}" data-class-id="${cls.id}">
           <div class="att-card-header">
@@ -255,6 +268,14 @@
           </div>
 
           <div class="att-card-meta-bar">
+            ${assignedGroup ? `
+              <span class="att-meta-chip" title="Assigned User Group: ${window.escapeHtml(assignedGroup.name)}">
+                <span style="color: var(--accent);">👥</span>
+                <strong>${window.escapeHtml(assignedGroup.name)}</strong>
+                <span style="color: var(--muted); font-size: 11px;">(${Array.isArray(assignedGroup.members) ? assignedGroup.members.length : 0})</span>
+              </span>
+              <span class="att-meta-divider"></span>
+            ` : ''}
             <span class="att-meta-chip"><strong>${subjectCount}</strong> ${subjectCount === 1 ? 'Subject' : 'Subjects'}</span>
             <span class="att-meta-divider"></span>
             <span class="att-meta-chip"><strong>${totalPeriods}</strong> ${totalPeriods === 1 ? 'Period' : 'Periods'}/Wk</span>
@@ -369,6 +390,21 @@
     const editIdInput = document.getElementById('clsEditClassId');
     const nameInput = document.getElementById('clsClassName');
     const descInput = document.getElementById('clsClassDesc');
+    const assignedGroupSelect = document.getElementById('clsAssignedGroup');
+
+    // Populate assigned user group dropdown options
+    if (assignedGroupSelect) {
+      if (typeof window.loadUserGroupsDataFromStorage === 'function') {
+        window.loadUserGroupsDataFromStorage();
+      }
+      const groups = (window.userGroupsData && Array.isArray(window.userGroupsData.groups)) ? window.userGroupsData.groups : [];
+      let opts = '<option value="">-- No User Group Assigned --</option>';
+      groups.forEach(g => {
+        const count = Array.isArray(g.members) ? g.members.length : 0;
+        opts += `<option value="${g.id}">👥 ${window.escapeHtml(g.name)} (${count} ${count === 1 ? 'member' : 'members'})</option>`;
+      });
+      assignedGroupSelect.innerHTML = opts;
+    }
 
     if (classId) {
       const cls = getClassById(classId);
@@ -378,6 +414,7 @@
       if (editIdInput) editIdInput.value = cls.id;
       if (nameInput) nameInput.value = cls.name || '';
       if (descInput) descInput.value = cls.description || '';
+      if (assignedGroupSelect) assignedGroupSelect.value = cls.assignedGroupId || '';
 
       clsDraftSubjects = JSON.parse(JSON.stringify(cls.subjects || []));
       clsDraftTimetable = JSON.parse(JSON.stringify(cls.timetable || {}));
@@ -386,6 +423,7 @@
       if (editIdInput) editIdInput.value = '';
       if (nameInput) nameInput.value = '';
       if (descInput) descInput.value = '';
+      if (assignedGroupSelect) assignedGroupSelect.value = '';
 
       clsDraftSubjects = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_SUBJECTS || []));
       clsDraftTimetable = JSON.parse(JSON.stringify(window.GENERIC_DEFAULT_TIMETABLE || {}));
@@ -404,10 +442,14 @@
   function renderClsDraftSubjectsList() {
     const listEl = document.getElementById('clsDraftSubjectsList');
     const countBadge = document.getElementById('clsDraftSubjectsCount');
+    const matrixCountBadge = document.getElementById('clsMatrixSubjectsCount');
     if (!listEl) return;
 
     if (countBadge) {
       countBadge.textContent = `${clsDraftSubjects.length}`;
+    }
+    if (matrixCountBadge) {
+      matrixCountBadge.textContent = `${clsDraftSubjects.length}`;
     }
 
     listEl.innerHTML = '';
@@ -470,7 +512,9 @@
       if (deleteBtn) {
         const subId = deleteBtn.dataset.id;
         clsDraftSubjects = clsDraftSubjects.filter(s => s.id !== subId);
+        syncDraftSubjectsToCurrentClass();
         renderClsDraftSubjectsList();
+        renderClsTimetableEditor();
         return;
       }
 
@@ -481,7 +525,9 @@
           const temp = clsDraftSubjects[idx];
           clsDraftSubjects[idx] = clsDraftSubjects[idx - 1];
           clsDraftSubjects[idx - 1] = temp;
+          syncDraftSubjectsToCurrentClass();
           renderClsDraftSubjectsList();
+          renderClsTimetableEditor();
         }
         return;
       }
@@ -493,11 +539,23 @@
           const temp = clsDraftSubjects[idx];
           clsDraftSubjects[idx] = clsDraftSubjects[idx + 1];
           clsDraftSubjects[idx + 1] = temp;
+          syncDraftSubjectsToCurrentClass();
           renderClsDraftSubjectsList();
+          renderClsTimetableEditor();
         }
         return;
       }
     };
+  }
+
+  function syncDraftSubjectsToCurrentClass() {
+    if (!clsCurrentTimetableClassId) return;
+    const cls = getClassById(clsCurrentTimetableClassId);
+    if (cls) {
+      cls.subjects = JSON.parse(JSON.stringify(clsDraftSubjects));
+      cls.updatedAt = new Date().toISOString();
+      saveClassesDataToStorage();
+    }
   }
 
   // --- SUBJECT MODAL CONTROLS ---
@@ -596,11 +654,92 @@
       clsDraftSubjects.push(newSubject);
     }
 
+    syncDraftSubjectsToCurrentClass();
     closeClsSubjectModal();
     renderClsDraftSubjectsList();
+    renderClsTimetableEditor();
   }
 
-  // --- SCREEN 3: TIMETABLE MATRIX DASHBOARD ---
+  // --- SCREEN 3: CLASS WORKSPACE (TIMETABLE, SUBJECTS, USER GROUPS) ---
+  function switchClsWorkspaceTab(tabKey) {
+    clsActiveWorkspaceTab = tabKey;
+    const tabBtns = document.querySelectorAll('#clsWorkspaceTabs .segmented-btn');
+    tabBtns.forEach(btn => {
+      const isMatch = btn.getAttribute('data-cls-tab') === tabKey;
+      btn.classList.toggle('active', isMatch);
+      btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+    });
+
+    const timetablePane = document.getElementById('clsWorkspaceTabTimetable');
+    const subjectsPane = document.getElementById('clsWorkspaceTabSubjects');
+    const rosterPane = document.getElementById('clsWorkspaceTabRoster');
+
+    if (timetablePane) timetablePane.style.display = tabKey === 'timetable' ? '' : 'none';
+    if (subjectsPane) subjectsPane.style.display = tabKey === 'subjects' ? '' : 'none';
+    if (rosterPane) rosterPane.style.display = tabKey === 'roster' ? '' : 'none';
+  }
+
+  function renderClsUserGroupTab() {
+    if (!clsCurrentTimetableClassId) return;
+    const cls = getClassById(clsCurrentTimetableClassId);
+    if (!cls) return;
+
+    const bannerEl = document.getElementById('clsAssignedUgBanner');
+    const unassignedCard = document.getElementById('clsUnassignedUgCard');
+    const ugNameEl = document.getElementById('clsAssignedUgName');
+    const ugCountEl = document.getElementById('clsAssignedUgMemberCount');
+    const rosterPreviewContainer = document.getElementById('clsRosterPreviewContainer');
+    const rosterPreviewList = document.getElementById('clsRosterPreviewList');
+    const inlineGroupSelect = document.getElementById('clsInlineAssignedGroup');
+
+    if (typeof window.loadUserGroupsDataFromStorage === 'function') {
+      window.loadUserGroupsDataFromStorage();
+    }
+    const groups = (window.userGroupsData && Array.isArray(window.userGroupsData.groups)) ? window.userGroupsData.groups : [];
+
+    // Populate inline select
+    if (inlineGroupSelect) {
+      let opts = '<option value="">-- Select User Group --</option>';
+      groups.forEach(g => {
+        const count = Array.isArray(g.members) ? g.members.length : 0;
+        const selected = g.id === cls.assignedGroupId ? 'selected' : '';
+        opts += `<option value="${g.id}" ${selected}>👥 ${window.escapeHtml(g.name)} (${count} ${count === 1 ? 'member' : 'members'})</option>`;
+      });
+      inlineGroupSelect.innerHTML = opts;
+    }
+
+    const assignedGroup = cls.assignedGroupId ? groups.find(g => g.id === cls.assignedGroupId) : null;
+
+    if (assignedGroup) {
+      if (bannerEl) bannerEl.style.display = 'flex';
+      if (unassignedCard) unassignedCard.style.display = 'none';
+      if (ugNameEl) ugNameEl.textContent = assignedGroup.name;
+      if (ugCountEl) ugCountEl.textContent = Array.isArray(assignedGroup.members) ? assignedGroup.members.length : 0;
+
+      if (rosterPreviewContainer) rosterPreviewContainer.style.display = 'block';
+      if (rosterPreviewList) {
+        const members = Array.isArray(assignedGroup.members) ? assignedGroup.members : [];
+        if (members.length === 0) {
+          rosterPreviewList.innerHTML = '<div style="color: var(--muted); font-size: var(--text-xs); padding: 8px;">No members in this group yet. Add members in User Groups.</div>';
+        } else {
+          rosterPreviewList.innerHTML = members.map((m, idx) => {
+            const rollNo = m.rollNo || (idx + 1);
+            return `
+              <div class="att-participant-card" style="padding: 8px 12px; display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm);">
+                <span class="att-roll-badge" style="font-weight: 700; font-size: 11px; color: var(--accent); background: rgba(230,0,35,0.08); padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">#${rollNo}</span>
+                <span style="font-weight: 500; font-size: var(--text-sm); color: var(--fg);">${window.escapeHtml(m.name)}</span>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    } else {
+      if (bannerEl) bannerEl.style.display = 'none';
+      if (rosterPreviewContainer) rosterPreviewContainer.style.display = 'none';
+      if (unassignedCard) unassignedCard.style.display = 'block';
+    }
+  }
+
   function openClassTimetable(classId, pushRoute = true) {
     clsCurrentTimetableClassId = classId;
     const cls = getClassById(classId);
@@ -608,9 +747,21 @@
 
     const titleEl = document.getElementById('clsTimetableClassTitle');
     const descEl = document.getElementById('clsTimetableClassDesc');
-    if (titleEl) titleEl.textContent = `${cls.name} Timetable`;
-    if (descEl) descEl.textContent = 'Configure weekly schedule';
+    if (titleEl) titleEl.textContent = `${cls.name} Class Workspace`;
+    
+    let assignedGroupName = '';
+    if (cls.assignedGroupId && window.userGroupsData && Array.isArray(window.userGroupsData.groups)) {
+      const g = window.userGroupsData.groups.find(group => group.id === cls.assignedGroupId);
+      if (g) assignedGroupName = g.name;
+    }
 
+    if (descEl) {
+      descEl.textContent = assignedGroupName 
+        ? `Weekly schedule & subjects • 👥 ${assignedGroupName}` 
+        : (cls.description || 'Configure timetable, subjects & student roster');
+    }
+
+    clsDraftSubjects = JSON.parse(JSON.stringify(cls.subjects || []));
     clsDraftTimetable = JSON.parse(JSON.stringify(cls.timetable || {}));
     
     // Ensure all 7 days exist
@@ -623,7 +774,10 @@
       }
     });
 
+    switchClsWorkspaceTab(clsActiveWorkspaceTab || 'timetable');
     renderClsTimetableSchedule();
+    renderClsDraftSubjectsList();
+    renderClsUserGroupTab();
     updateClsStatusButton();
     showClsScreen('cls-screen-matrix');
 
@@ -751,42 +905,15 @@
     saveClassesDataToStorage();
   }
 
-  async function resetClassTimetable() {
-    if (!clsCurrentTimetableClassId) return;
-    const cls = getClassById(clsCurrentTimetableClassId);
-    if (!cls) return;
-
-    const confirmed = await window.showConfirmDialog({
-      title: `Reset ${cls.name} Timetable?`,
-      message: 'Are you sure you want to clear all period slots across all 7 days for this class?',
-      confirmText: 'Reset Timetable',
-      cancelText: 'Cancel',
-      isDanger: true
-    });
-
-    if (!confirmed) return;
-
-    const blankTimetable = {};
-    (window.DAYS_OF_WEEK || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']).forEach(d => {
-      blankTimetable[d] = ['', '', '', '', '', '', '', ''];
-    });
-
-    clsDraftTimetable = blankTimetable;
-    saveDraftTimetableToClass();
-    renderClsTimetableSchedule();
-
-    if (typeof window.showToast === 'function') {
-      window.showToast('Timetable reset successfully');
-    }
-  }
-
   // --- FORM SNAPSHOT & DIRTY DETECTION ---
   function takeClsInitialFormSnapshot() {
     const nameInput = document.getElementById('clsClassName');
     const descInput = document.getElementById('clsClassDesc');
+    const assignedGroupSelect = document.getElementById('clsAssignedGroup');
     clsInitialFormSnapshot = {
       name: nameInput ? nameInput.value.trim() : '',
       desc: descInput ? descInput.value.trim() : '',
+      assignedGroupId: assignedGroupSelect ? assignedGroupSelect.value : '',
       subjects: JSON.stringify(clsDraftSubjects)
     };
   }
@@ -795,13 +922,16 @@
     if (!clsInitialFormSnapshot) return false;
     const nameInput = document.getElementById('clsClassName');
     const descInput = document.getElementById('clsClassDesc');
+    const assignedGroupSelect = document.getElementById('clsAssignedGroup');
     const currentName = nameInput ? nameInput.value.trim() : '';
     const currentDesc = descInput ? descInput.value.trim() : '';
+    const currentAssignedGroup = assignedGroupSelect ? assignedGroupSelect.value : '';
     const currentSubjects = JSON.stringify(clsDraftSubjects);
 
     return (
       currentName !== clsInitialFormSnapshot.name ||
       currentDesc !== clsInitialFormSnapshot.desc ||
+      currentAssignedGroup !== clsInitialFormSnapshot.assignedGroupId ||
       currentSubjects !== clsInitialFormSnapshot.subjects
     );
   }
@@ -830,6 +960,7 @@
         name: '2G',
         description: 'Class 2G Classroom',
         isActive: true,
+        assignedGroupId: null,
         subjects: JSON.parse(JSON.stringify(window.PRESET_2G_SUBJECTS || [])),
         timetable: JSON.parse(JSON.stringify(window.PRESET_2G_TIMETABLE || {})),
         createdAt: new Date().toISOString(),
@@ -897,8 +1028,10 @@
         e.preventDefault();
         const nameInput = document.getElementById('clsClassName');
         const descInput = document.getElementById('clsClassDesc');
+        const assignedGroupSelect = document.getElementById('clsAssignedGroup');
         const name = nameInput ? nameInput.value.trim() : '';
         const desc = descInput ? descInput.value.trim() : '';
+        const assignedGroupId = assignedGroupSelect && assignedGroupSelect.value ? assignedGroupSelect.value : null;
 
         if (!name) return;
 
@@ -907,6 +1040,7 @@
           if (cls) {
             cls.name = name;
             cls.description = desc;
+            cls.assignedGroupId = assignedGroupId;
             cls.subjects = JSON.parse(JSON.stringify(clsDraftSubjects));
             cls.updatedAt = new Date().toISOString();
           }
@@ -916,6 +1050,8 @@
             id: `cls_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
             name,
             description: desc,
+            isActive: true,
+            assignedGroupId: assignedGroupId,
             subjects: JSON.parse(JSON.stringify(clsDraftSubjects)),
             timetable: JSON.parse(JSON.stringify(clsDraftTimetable || window.GENERIC_DEFAULT_TIMETABLE || {})),
             createdAt: new Date().toISOString(),
@@ -948,8 +1084,82 @@
       });
     }
 
-    const resetTimetableBtn = document.getElementById('clsResetTimetableBtn');
-    if (resetTimetableBtn) resetTimetableBtn.addEventListener('click', resetClassTimetable);
+    // Workspace Navigation Tabs listener
+    const workspaceTabs = document.getElementById('clsWorkspaceTabs');
+    if (workspaceTabs) {
+      workspaceTabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('.segmented-btn');
+        if (!btn) return;
+        const tabKey = btn.getAttribute('data-cls-tab');
+        if (tabKey) switchClsWorkspaceTab(tabKey);
+      });
+    }
+
+    // User Group Assignment in Workspace
+    const inlineAssignBtn = document.getElementById('clsInlineAssignUgBtn');
+    if (inlineAssignBtn) {
+      inlineAssignBtn.addEventListener('click', () => {
+        if (!clsCurrentTimetableClassId) return;
+        const cls = getClassById(clsCurrentTimetableClassId);
+        if (!cls) return;
+
+        const inlineSelect = document.getElementById('clsInlineAssignedGroup');
+        const gId = inlineSelect ? inlineSelect.value : '';
+        if (!gId) {
+          if (inlineSelect) inlineSelect.focus();
+          if (typeof window.showToast === 'function') window.showToast('Please select a user group from the dropdown.');
+          return;
+        }
+
+        cls.assignedGroupId = gId;
+        cls.updatedAt = new Date().toISOString();
+        saveClassesDataToStorage();
+        renderClsUserGroupTab();
+        renderClsClassesList();
+
+        const group = (window.userGroupsData && window.userGroupsData.groups) ? window.userGroupsData.groups.find(g => g.id === gId) : null;
+        const gName = group ? group.name : 'Group';
+        if (typeof window.showToast === 'function') window.showToast(`Assigned User Group: "${gName}"`);
+      });
+    }
+
+    const changeUgBtn = document.getElementById('clsChangeUgBtn');
+    if (changeUgBtn) {
+      changeUgBtn.addEventListener('click', () => {
+        const bannerEl = document.getElementById('clsAssignedUgBanner');
+        const unassignedCard = document.getElementById('clsUnassignedUgCard');
+        const rosterPreviewContainer = document.getElementById('clsRosterPreviewContainer');
+        if (bannerEl) bannerEl.style.display = 'none';
+        if (rosterPreviewContainer) rosterPreviewContainer.style.display = 'none';
+        if (unassignedCard) unassignedCard.style.display = 'block';
+      });
+    }
+
+    const unassignUgBtn = document.getElementById('clsUnassignUgBtn');
+    if (unassignUgBtn) {
+      unassignUgBtn.addEventListener('click', async () => {
+        if (!clsCurrentTimetableClassId) return;
+        const cls = getClassById(clsCurrentTimetableClassId);
+        if (!cls) return;
+
+        const confirmed = await window.showConfirmDialog({
+          title: 'Unlink User Group?',
+          message: 'Are you sure you want to disconnect this class from its assigned User Group?',
+          confirmText: 'Unlink Group',
+          cancelText: 'Cancel',
+          isDanger: false
+        });
+
+        if (!confirmed) return;
+
+        cls.assignedGroupId = null;
+        cls.updatedAt = new Date().toISOString();
+        saveClassesDataToStorage();
+        renderClsUserGroupTab();
+        renderClsClassesList();
+        if (typeof window.showToast === 'function') window.showToast('User group unlinked from class');
+      });
+    }
   }
 
   // Export to global scope

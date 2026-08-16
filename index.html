@@ -663,12 +663,12 @@
           </div>
         </section>
 
-        <!-- SCREEN 2: CREATE / EDIT CLASS & SUBJECTS -->
+        <!-- SCREEN 2: CREATE / EDIT CLASS -->
         <section id="cls-screen-form" class="att-screen">
           <div class="pane-header">
             <div>
               <h2 id="clsClassFormTitle">Create Class</h2>
-              <p class="pane-desc">Configure class details and customize subject list.</p>
+              <p class="pane-desc">Configure class name, description, and assign user group.</p>
             </div>
           </div>
 
@@ -685,7 +685,74 @@
               <input type="text" id="clsClassDesc" class="input-control" placeholder="e.g. Primary Section Academic Year 2026-27">
             </div>
 
-            <!-- Subjects Management Section -->
+            <div class="form-group">
+              <label for="clsAssignedGroup">Assigned User Group (Optional)</label>
+              <select id="clsAssignedGroup" class="input-control">
+                <option value="">-- No User Group Assigned --</option>
+              </select>
+              <span class="section-hint" style="margin-top: 4px;">Assign a master user group to link this class with its student roster.</span>
+            </div>
+
+            <div class="form-actions-row">
+              <button type="button" id="clsCancelClassFormBtn" class="btn btn-subtle">Cancel</button>
+              <button type="submit" id="clsSaveClassBtn" class="btn btn-primary">Save Class</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- SCREEN 3: CLASS WORKSPACE (TIMETABLE, SUBJECTS, USER GROUPS) -->
+        <section id="cls-screen-matrix" class="att-screen">
+          <div class="pane-header">
+            <div class="pane-info">
+              <h2 id="clsTimetableClassTitle">Class Timetable</h2>
+              <p id="clsTimetableClassDesc" class="pane-desc">Configure weekly schedule</p>
+            </div>
+            <div class="pane-actions">
+              <button type="button" id="clsToggleStatusBtn" class="btn btn-subtle btn-sm" title="Toggle Active / Inactive Status">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+                <span>Inactive</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Class Management Navigation Filter Panel -->
+          <div class="att-filter-panel">
+            <div class="filter-panel-row filter-row-top">
+              <div class="filter-group-left">
+                <div class="view-mode-segmented" id="clsWorkspaceTabs" role="tablist" aria-label="Class Management Tabs">
+                  <button type="button" class="segmented-btn active" data-cls-tab="timetable" role="tab" aria-selected="true">Timetable Matrix</button>
+                  <button type="button" class="segmented-btn" data-cls-tab="subjects" role="tab" aria-selected="false">Subjects (<span id="clsMatrixSubjectsCount">0</span>)</button>
+                  <button type="button" class="segmented-btn" data-cls-tab="roster" role="tab" aria-selected="false">User Group</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 1: TIMETABLE MATRIX -->
+          <div id="clsWorkspaceTabTimetable" class="cls-workspace-tab-pane active">
+            <div class="day-selector-pills" id="clsDaySelectorPills">
+              <button class="day-pill active" data-day="Monday">Mon</button>
+              <button class="day-pill" data-day="Tuesday">Tue</button>
+              <button class="day-pill" data-day="Wednesday">Wed</button>
+              <button class="day-pill" data-day="Thursday">Thu</button>
+              <button class="day-pill" data-day="Friday">Fri</button>
+              <button class="day-pill" data-day="Saturday">Sat</button>
+              <button class="day-pill" data-day="Sunday">Sun</button>
+            </div>
+
+            <div class="timetable-day-editor">
+              <div class="day-editor-header">
+                <h3 id="clsCurrentDayTitle">Monday Schedule</h3>
+                <span class="day-subject-count" id="clsDaySubjectCount">0/8 Assigned</span>
+              </div>
+              <div id="clsTimetablePeriodSlots" class="timetable-slots-list">
+                <!-- Dynamically rendered 8 period slot dropdown selectors for selected day -->
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: SUBJECTS MANAGEMENT -->
+          <div id="clsWorkspaceTabSubjects" class="cls-workspace-tab-pane" style="display: none;">
             <div id="clsStandardSubjectsSection" class="att-participants-section">
               <div class="section-title-row">
                 <div>
@@ -699,50 +766,59 @@
                 <!-- Dynamically rendered subject items matching tab-subjects -->
               </div>
             </div>
-
-            <div class="form-actions-row">
-              <button type="button" id="clsCancelClassFormBtn" class="btn btn-subtle">Cancel</button>
-              <button type="submit" id="clsSaveClassBtn" class="btn btn-primary">Save Class</button>
-            </div>
-          </form>
-        </section>
-
-        <!-- SCREEN 3: TIMETABLE MATRIX DASHBOARD -->
-        <section id="cls-screen-matrix" class="att-screen">
-          <div class="pane-header">
-            <div class="pane-info">
-              <h2 id="clsTimetableClassTitle">Class Timetable</h2>
-              <p id="clsTimetableClassDesc" class="pane-desc">Configure weekly schedule</p>
-            </div>
-            <div class="pane-actions">
-              <button type="button" id="clsToggleStatusBtn" class="btn btn-subtle btn-sm" title="Toggle Active / Inactive Status">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
-                <span>Inactive</span>
-              </button>
-              <button type="button" id="clsResetTimetableBtn" class="btn btn-outline-danger btn-sm" title="Reset Timetable">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 3px;"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
-                <span>Reset</span>
-              </button>
-            </div>
           </div>
 
-          <div class="day-selector-pills" id="clsDaySelectorPills">
-            <button class="day-pill active" data-day="Monday">Mon</button>
-            <button class="day-pill" data-day="Tuesday">Tue</button>
-            <button class="day-pill" data-day="Wednesday">Wed</button>
-            <button class="day-pill" data-day="Thursday">Thu</button>
-            <button class="day-pill" data-day="Friday">Fri</button>
-            <button class="day-pill" data-day="Saturday">Sat</button>
-            <button class="day-pill" data-day="Sunday">Sun</button>
-          </div>
+          <!-- TAB 3: USER GROUP MANAGEMENT -->
+          <div id="clsWorkspaceTabRoster" class="cls-workspace-tab-pane" style="display: none;">
+            <div class="att-participants-section">
+              <div class="section-title-row" style="flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <h3 style="margin-bottom: 2px;">Assigned User Group</h3>
+                  <span class="section-hint" style="margin: 0;">Link a master student roster from User Groups to this class.</span>
+                </div>
+              </div>
 
-          <div class="timetable-day-editor">
-            <div class="day-editor-header">
-              <h3 id="clsCurrentDayTitle">Monday Schedule</h3>
-              <span class="day-subject-count" id="clsDaySubjectCount">0/8 Assigned</span>
-            </div>
-            <div id="clsTimetablePeriodSlots" class="timetable-slots-list">
-              <!-- Dynamically rendered 8 period slot dropdown selectors for selected day -->
+              <!-- Synced User Group Banner (Visible when assigned) -->
+              <div id="clsAssignedUgBanner" class="att-assigned-ug-banner" style="display: none; margin-top: 12px;">
+                <div class="assigned-ug-info">
+                  <span class="sync-icon">👥</span>
+                  <div>
+                    <div style="font-weight: 600; font-size: var(--text-sm);">Linked User Group: <span id="clsAssignedUgName" style="color: var(--accent);"></span></div>
+                    <p class="sync-subtext" style="font-size: var(--text-xs); color: var(--muted); margin: 2px 0 0 0;">
+                      Student roster is kept in live sync with the master User Group. (<span id="clsAssignedUgMemberCount">0</span> members)
+                    </p>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" id="clsChangeUgBtn" class="btn btn-secondary btn-sm" title="Switch User Group">
+                    Change
+                  </button>
+                  <button type="button" id="clsUnassignUgBtn" class="btn btn-subtle btn-sm" style="color: var(--danger);" title="Unlink User Group">
+                    Unlink
+                  </button>
+                </div>
+              </div>
+
+              <!-- Unassigned State with Dropdown & Assign Button (Visible when NOT assigned) -->
+              <div id="clsUnassignedUgCard" class="att-empty-state" style="display: none; padding: 24px 16px; margin-top: 12px;">
+                <div class="att-empty-icon" style="font-size: 28px;">👥</div>
+                <h3 style="font-size: var(--text-base); margin-bottom: 4px;">No User Group Assigned</h3>
+                <p style="font-size: var(--text-xs); margin-bottom: 16px;">Select an existing user group to link its student roster to this class.</p>
+                <div style="display: flex; gap: 8px; width: 100%; max-width: 440px; justify-content: center; margin: 0 auto;">
+                  <select id="clsInlineAssignedGroup" class="input-control" style="flex: 1;">
+                    <option value="">-- Select User Group --</option>
+                  </select>
+                  <button type="button" id="clsInlineAssignUgBtn" class="btn btn-primary btn-sm" style="white-space: nowrap;">Assign Group</button>
+                </div>
+              </div>
+
+              <!-- Read-only Roster Preview list when assigned -->
+              <div id="clsRosterPreviewContainer" style="margin-top: 16px; display: none;">
+                <h4 style="font-size: var(--text-xs); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Student Roster Preview</h4>
+                <div id="clsRosterPreviewList" class="att-participants-list">
+                  <!-- Rendered student items -->
+                </div>
+              </div>
             </div>
           </div>
         </section>
