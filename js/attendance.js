@@ -1995,7 +1995,7 @@
     if (copyFromUgBtn) {
       copyFromUgBtn.addEventListener('click', async () => {
         if (!window.userGroupsData || !window.userGroupsData.groups || window.userGroupsData.groups.length === 0) {
-          if (typeof window.showToast === 'function') window.showToast('No user groups available. Create one in Manage > User Groups first.');
+          if (typeof window.showToast === 'function') window.showToast('No user groups available. Create one in User Groups first.');
           return;
         }
 
@@ -2062,7 +2062,7 @@
     if (assignUgBtn) {
       assignUgBtn.addEventListener('click', async () => {
         if (!window.userGroupsData || !window.userGroupsData.groups || window.userGroupsData.groups.length === 0) {
-          if (typeof window.showToast === 'function') window.showToast('No user groups available. Create one in Manage > User Groups first.');
+          if (typeof window.showToast === 'function') window.showToast('No user groups available. Create one in User Groups first.');
           return;
         }
 
@@ -2088,9 +2088,9 @@
 
           let message = '';
           if (hasRecordedSessions) {
-            message = `Assigning "${group.name}" (${newParticipants.length} members) will link this program in permanent sync with the master User Group.\n\nAttendance history will be automatically mapped to ${matchResult.matchedCount} matching attendee${matchResult.matchedCount === 1 ? '' : 's'} (matched by roll number and name). Only recoverable entries will be mapped; any completely unmatchable records will be discarded.\n\nAll future roster changes must be made in Manage > User Groups. Do you want to proceed?`;
+            message = `Assigning "${group.name}" (${newParticipants.length} members) will link this program in permanent sync with the master User Group.\n\nAttendance history will be automatically mapped to ${matchResult.matchedCount} matching attendee${matchResult.matchedCount === 1 ? '' : 's'} (matched by roll number and name). Only recoverable entries will be mapped; any completely unmatchable records will be discarded.\n\nAll future roster changes must be made in User Groups. Do you want to proceed?`;
           } else {
-            message = `Assigning "${group.name}" (${newParticipants.length} members) will link this program in permanent sync with the master User Group. All future roster edits must be made in Manage > User Groups. Do you want to proceed?`;
+            message = `Assigning "${group.name}" (${newParticipants.length} members) will link this program in permanent sync with the master User Group. All future roster edits must be made in User Groups. Do you want to proceed?`;
           }
 
           const confirmed = await window.showConfirmDialog({

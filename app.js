@@ -38,12 +38,10 @@
   function setupPWA() {
     const pwaInstallBtn = document.getElementById('pwaInstallBtn');
 
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then((registration) => {
-          console.log('ServiceWorker registered successfully with scope:', registration.scope);
-        }).catch((error) => {
-          console.warn('ServiceWorker registration failed:', error);
+        navigator.serviceWorker.register('sw.js').catch(() => {
+          // Silently ignore if service worker registration is not supported in this environment
         });
       });
     }
@@ -57,9 +55,6 @@
           if (deferredInstallPrompt) {
             deferredInstallPrompt.prompt();
             deferredInstallPrompt.userChoice.then((choiceResult) => {
-              if (choiceResult.outcome === 'accepted') {
-                console.log('User accepted PWA install');
-              }
               pwaInstallBtn.style.display = 'none';
               deferredInstallPrompt = null;
             });
@@ -69,7 +64,6 @@
     });
 
     window.addEventListener('appinstalled', () => {
-      console.log('Glimpse App installed!');
       if (pwaInstallBtn) pwaInstallBtn.style.display = 'none';
       deferredInstallPrompt = null;
     });
@@ -77,6 +71,7 @@
 
   // --- FEELGOOD MESSAGES & QUOTES ---
   function loadFeelgoodMessagesFromJson() {
+    if (window.location.protocol === 'file:') return;
     fetch('./feelgood-messages.json')
       .then(res => {
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -88,8 +83,8 @@
           updateLandingPageHero();
         }
       })
-      .catch(err => {
-        console.warn('Could not load feelgood-messages.json, using fallback messages:', err);
+      .catch(() => {
+        // Built-in messages from constants.js will be used automatically
       });
   }
 

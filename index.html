@@ -79,13 +79,26 @@
             </div>
           </div>
 
-          <!-- MAIN APP TILE: MANAGE -->
-          <div class="app-tile main-app-tile" id="tileManageApp">
-            <div class="tile-icon-wrapper" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
-              <span class="tile-icon">⚙️</span>
+          <!-- MAIN APP TILE: USER GROUP -->
+          <div class="app-tile main-app-tile" id="tileUserGroup">
+            <div class="tile-icon-wrapper" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+              <span class="tile-icon">👥</span>
             </div>
             <div class="tile-title-group">
-              <h3>Manage</h3>
+              <h3>User Group</h3>
+            </div>
+            <div class="tile-arrow">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+
+          <!-- MAIN APP TILE: CLASSES -->
+          <div class="app-tile main-app-tile" id="tileClasses">
+            <div class="tile-icon-wrapper" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+              <span class="tile-icon">🏫</span>
+            </div>
+            <div class="tile-title-group">
+              <h3>Classes</h3>
             </div>
             <div class="tile-arrow">
               <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -311,7 +324,7 @@
                   <div>
                     <div style="font-weight: 600; font-size: var(--text-sm);">Synced with User Group: <span id="attAssignedUgName" style="color: var(--accent);"></span></div>
                     <p class="sync-subtext" style="font-size: var(--text-xs); color: var(--muted); margin: 2px 0 0 0;">
-                      Roster is automatically kept in sync with the master User Group. To edit members, update the group in Manage &gt; User Groups.
+                      Roster is automatically kept in sync with the master User Group. To edit members, update the group in User Groups.
                     </p>
                   </div>
                 </div>
@@ -477,63 +490,7 @@
       </main>
     </div>
 
-    <!-- VIEW 4: THE MANAGE APPLICATION -->
-    <div id="view-manage-app" class="app-view">
-      
-      <!-- Top Header inside Manage App -->
-      <header class="app-header">
-        <div class="header-left">
-          <button id="manageBackToDashboardBtn" class="btn-back-dashboard" title="Return to Apps Dashboard" aria-label="Back to Dashboard">
-            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            <span class="btn-back-text">Dashboard</span>
-          </button>
-          <div class="header-brand">
-            <span class="brand-icon">⚙️</span>
-            <div class="brand-text">
-              <h1>Manage</h1>
-              <span class="subtitle">System &amp; Workspace Management</span>
-            </div>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button class="icon-btn theme-toggle-btn" title="Toggle Theme" aria-label="Toggle Theme">
-            <span class="theme-icon-span">
-              <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
-            </span>
-          </button>
-        </div>
-      </header>
 
-      <main class="dashboard-content">
-        <div class="apps-grid">
-          <!-- MAIN APP TILE: USER GROUP -->
-          <div class="app-tile main-app-tile" id="tileUserGroup">
-            <div class="tile-icon-wrapper" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-              <span class="tile-icon">👥</span>
-            </div>
-            <div class="tile-title-group">
-              <h3>User Group</h3>
-            </div>
-            <div class="tile-arrow">
-              <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-          </div>
-
-          <!-- MAIN APP TILE: CLASSES -->
-          <div class="app-tile main-app-tile" id="tileClasses">
-            <div class="tile-icon-wrapper" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-              <span class="tile-icon">🏫</span>
-            </div>
-            <div class="tile-title-group">
-              <h3>Classes</h3>
-            </div>
-            <div class="tile-arrow">
-              <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
 
     <!-- VIEW 5: THE USER GROUPS APPLICATION -->
     <div id="view-user-groups-app" class="app-view">
@@ -541,9 +498,9 @@
       <!-- Top Header inside User Groups App -->
       <header class="app-header">
         <div class="header-left">
-          <button id="ugBackBtn" class="btn-back-dashboard" title="Back" aria-label="Back">
+          <button id="ugBackBtn" class="btn-back-dashboard" title="Return to Apps Dashboard" aria-label="Back to Dashboard">
             <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            <span class="btn-back-text" id="ugBackBtnText">Manage</span>
+            <span class="btn-back-text" id="ugBackBtnText">Dashboard</span>
           </button>
           <div class="header-brand">
             <span class="brand-icon">👥</span>
@@ -663,9 +620,9 @@
       <!-- Top Header inside Classes App -->
       <header class="app-header">
         <div class="header-left">
-          <button id="clsBackBtn" class="btn-back-dashboard" title="Back" aria-label="Back">
+          <button id="clsBackBtn" class="btn-back-dashboard" title="Return to Apps Dashboard" aria-label="Back to Dashboard">
             <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            <span class="btn-back-text" id="clsBackBtnText">Manage</span>
+            <span class="btn-back-text" id="clsBackBtnText">Dashboard</span>
           </button>
           <div class="header-brand">
             <span class="brand-icon">🏫</span>

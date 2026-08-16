@@ -378,7 +378,7 @@
       if (groups.length === 0) {
         listEl.innerHTML = `
           <div style="text-align: center; color: var(--muted); padding: 24px 12px; font-size: var(--text-sm);">
-            No user groups found. Go to <strong>Manage &gt; User Groups</strong> to create one.
+            No user groups found. Go to <strong>User Groups</strong> to create one.
           </div>
         `;
       } else {

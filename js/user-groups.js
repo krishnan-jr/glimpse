@@ -52,7 +52,7 @@
     const ugBackBtnText = document.getElementById('ugBackBtnText');
     if (ugBackBtnText) {
       if (screenId === 'ug-screen-groups') {
-        ugBackBtnText.textContent = 'Manage';
+        ugBackBtnText.textContent = 'Dashboard';
       } else {
         ugBackBtnText.textContent = 'Groups';
       }
@@ -73,7 +73,7 @@
         if (typeof window.openUserGroupsApp === 'function') window.openUserGroupsApp();
       }
     } else {
-      if (typeof window.openManageApp === 'function') window.openManageApp();
+      if (typeof window.openDashboard === 'function') window.openDashboard();
     }
   }
 

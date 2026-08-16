@@ -78,16 +78,22 @@
     saveClassesDataToStorage();
   }
 
+  let isSyncingToLegacy = false;
+
   function saveClassesDataToStorage() {
     try {
       localStorage.setItem('glimpse_classes_data_v1', JSON.stringify(classesData));
-      syncActiveClassToLegacyStorage();
+      if (!isSyncingToLegacy) {
+        syncActiveClassToLegacyStorage();
+      }
     } catch (e) {
       console.error('[Classes] Error saving classes data:', e);
     }
   }
 
   function syncActiveClassToLegacyStorage() {
+    if (isSyncingToLegacy) return;
+    isSyncingToLegacy = true;
     try {
       const activeClass = getActiveClass();
       if (activeClass) {
@@ -102,6 +108,8 @@
       }
     } catch (e) {
       console.error('[Classes] Error syncing active class:', e);
+    } finally {
+      isSyncingToLegacy = false;
     }
   }
 
@@ -133,7 +141,7 @@
     const clsBackBtnText = document.getElementById('clsBackBtnText');
     if (clsBackBtnText) {
       if (screenId === 'cls-screen-classes') {
-        clsBackBtnText.textContent = 'Manage';
+        clsBackBtnText.textContent = 'Dashboard';
       } else {
         clsBackBtnText.textContent = 'Classes';
       }
@@ -146,14 +154,12 @@
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
-    const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-    if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.add('active');
 
@@ -171,8 +177,8 @@
     const screenId = activeScreen ? activeScreen.id : 'cls-screen-classes';
 
     if (screenId === 'cls-screen-classes') {
-      if (typeof window.openManageApp === 'function') {
-        window.openManageApp();
+      if (typeof window.openDashboard === 'function') {
+        window.openDashboard();
       }
     } else if (screenId === 'cls-screen-form') {
       if (isClsFormDirty()) {

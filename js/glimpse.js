@@ -114,12 +114,12 @@
       localStorage.setItem('glimpse_selected_class_id_v1', classId);
     } catch (e) {}
 
-    // 2. Set activeClassId in classes data
-    if (clsData) {
+    // 2. Set activeClassId in classes data if changed
+    if (clsData && clsData.activeClassId !== classId) {
       clsData.activeClassId = classId;
-      if (typeof window.saveClassesDataToStorage === 'function') {
-        window.saveClassesDataToStorage();
-      }
+      try {
+        localStorage.setItem('glimpse_classes_data_v1', JSON.stringify(clsData));
+      } catch (e) {}
     }
 
     // 3. Flow subjects, timetable, and class name directly from the class
@@ -148,8 +148,23 @@
   }
 
   function syncGlimpseWithActiveClass(activeClass) {
-    populateClassDivDropdown();
     if (!activeClass) return;
+
+    const classDivSelect = document.getElementById('classDiv');
+    if (classDivSelect) {
+      let clsData = window.classesData;
+      const classesList = (clsData && Array.isArray(clsData.classes)) ? clsData.classes : [];
+      const activeClassesList = classesList.filter(c => c.isActive !== false);
+
+      let optionsHtml = '';
+      activeClassesList.forEach(c => {
+        optionsHtml += `<option value="${c.id}">${window.escapeHtml(c.name)}</option>`;
+      });
+      classDivSelect.innerHTML = optionsHtml;
+      if (activeClass.id) {
+        classDivSelect.value = activeClass.id;
+      }
+    }
 
     if (Array.isArray(activeClass.subjects)) {
       subjects = JSON.parse(JSON.stringify(activeClass.subjects));
@@ -159,10 +174,6 @@
     }
     if (activeClass.name) {
       classAndDiv = activeClass.name;
-    }
-    const classDivSelect = document.getElementById('classDiv');
-    if (classDivSelect && activeClass.id) {
-      classDivSelect.value = activeClass.id;
     }
 
     try {

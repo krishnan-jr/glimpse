@@ -129,14 +129,12 @@
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
-    const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
 
     if (path.startsWith('glimpse')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-      if (viewManageApp) viewManageApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
@@ -162,8 +160,8 @@
     } else if (path.startsWith('attendance')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
-      if (viewManageApp) viewManageApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
 
       const sub = path.split('/')[1] || 'programs';
@@ -197,11 +195,10 @@
         if (typeof window.showAttScreen === 'function') window.showAttScreen('att-screen-programs');
         if (typeof window.renderAttProgramsList === 'function') window.renderAttProgramsList();
       }
-    } else if (path.startsWith('manage/groups') || path.startsWith('user-groups')) {
+    } else if (path.startsWith('manage/groups') || path.startsWith('user-groups') || path.startsWith('groups')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-      if (viewManageApp) viewManageApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
 
@@ -220,7 +217,6 @@
       if (viewDashboard) viewDashboard.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-      if (viewManageApp) viewManageApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.add('active');
 
@@ -240,18 +236,9 @@
         if (typeof window.showClsScreen === 'function') window.showClsScreen('cls-screen-classes');
         if (typeof window.renderClsClassesList === 'function') window.renderClsClassesList();
       }
-    } else if (path.startsWith('manage')) {
-      if (viewDashboard) viewDashboard.classList.remove('active');
-      if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
-      if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-      if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
-      if (viewClassesApp) viewClassesApp.classList.remove('active');
-      if (viewManageApp) viewManageApp.classList.add('active');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-      if (viewManageApp) viewManageApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
       if (viewDashboard) viewDashboard.classList.add('active');
@@ -266,14 +253,12 @@
   function openGlimpseApp() {
     const viewDashboard = document.getElementById('view-dashboard');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
-    const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-    if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
@@ -284,14 +269,12 @@
   function openAttendanceApp() {
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
-    const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
-    if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
@@ -302,35 +285,19 @@
   }
 
   function openManageApp() {
-    const viewDashboard = document.getElementById('view-dashboard');
-    const viewGlimpseApp = document.getElementById('view-glimpse-app');
-    const viewAttendanceApp = document.getElementById('view-attendance-app');
-    const viewUserGroupsApp = document.getElementById('view-user-groups-app');
-    const viewClassesApp = document.getElementById('view-classes-app');
-    const viewManageApp = document.getElementById('view-manage-app');
-
-    if (viewDashboard) viewDashboard.classList.remove('active');
-    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
-    if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-    if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
-    if (viewClassesApp) viewClassesApp.classList.remove('active');
-    if (viewManageApp) viewManageApp.classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    navigateToRoute('#/manage');
+    openDashboard();
   }
 
   function openUserGroupsApp() {
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
-    const viewManageApp = document.getElementById('view-manage-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-    if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -343,14 +310,12 @@
     const viewDashboard = document.getElementById('view-dashboard');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
-    const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-    if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -362,14 +327,12 @@
   function openDashboard() {
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
-    const viewManageApp = document.getElementById('view-manage-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
     const viewDashboard = document.getElementById('view-dashboard');
 
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
-    if (viewManageApp) viewManageApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
     if (viewDashboard) viewDashboard.classList.add('active');
@@ -382,18 +345,13 @@
 
   function setupViewNavigation() {
     const tileGlimpseApp = document.getElementById('tileGlimpseApp');
-    const tileManageApp = document.getElementById('tileManageApp');
     const tileAttendanceApp = document.getElementById('tileAttendanceApp');
     const tileUserGroup = document.getElementById('tileUserGroup');
     const tileClasses = document.getElementById('tileClasses');
     const backToDashboardBtn = document.getElementById('backToDashboardBtn');
-    const manageBackToDashboardBtn = document.getElementById('manageBackToDashboardBtn');
 
     if (tileGlimpseApp) {
       tileGlimpseApp.addEventListener('click', openGlimpseApp);
-    }
-    if (tileManageApp) {
-      tileManageApp.addEventListener('click', openManageApp);
     }
     if (tileAttendanceApp) {
       tileAttendanceApp.addEventListener('click', openAttendanceApp);
@@ -406,9 +364,6 @@
     }
     if (backToDashboardBtn) {
       backToDashboardBtn.addEventListener('click', openDashboard);
-    }
-    if (manageBackToDashboardBtn) {
-      manageBackToDashboardBtn.addEventListener('click', openDashboard);
     }
 
     // In-app alert for coming-soon tiles
