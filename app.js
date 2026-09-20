@@ -177,6 +177,7 @@
     if (typeof window.loadUserGroupsDataFromStorage === 'function') window.loadUserGroupsDataFromStorage();
     if (typeof window.loadAttendanceDataFromStorage === 'function') window.loadAttendanceDataFromStorage();
     if (typeof window.loadMarksheetDataFromStorage === 'function') window.loadMarksheetDataFromStorage();
+    if (typeof window.loadReportStudioDataFromStorage === 'function') window.loadReportStudioDataFromStorage();
     loadFeelgoodMessagesFromJson();
 
     const isSecretPresetTriggered = (typeof window.checkUrlForSecretPreset === 'function') 
@@ -200,6 +201,7 @@
     if (typeof window.setupMarksheetEventListeners === 'function') window.setupMarksheetEventListeners();
     if (typeof window.setupUserGroupsEventListeners === 'function') window.setupUserGroupsEventListeners();
     if (typeof window.setupClassesEventListeners === 'function') window.setupClassesEventListeners();
+    if (typeof window.setupReportStudioEventListeners === 'function') window.setupReportStudioEventListeners();
     if (typeof window.setupBackupSecretFeature === 'function') window.setupBackupSecretFeature();
     setupGlobalRouterEvents();
     updateLandingPageHero();

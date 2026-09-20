@@ -150,6 +150,7 @@
     const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
 
     if (path.startsWith('glimpse')) {
       if (viewDashboard) viewDashboard.classList.remove('active');
@@ -157,6 +158,7 @@
       if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
+      if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
       if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
 
       const sub = path.split('/')[1] || 'entry';
@@ -183,6 +185,7 @@
       if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
+      if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
 
       const sub = path.split('/')[1] || 'programs';
@@ -222,6 +225,7 @@
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
+      if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
       if (viewMarksheetApp) viewMarksheetApp.classList.add('active');
 
       const sub = path.split('/')[1] || 'entries';
@@ -250,6 +254,7 @@
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
+      if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
 
       const isForm = path.includes('/form');
@@ -269,6 +274,7 @@
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.add('active');
 
       const isForm = path.includes('/form');
@@ -287,12 +293,24 @@
         if (typeof window.showClsScreen === 'function') window.showClsScreen('cls-screen-classes');
         if (typeof window.renderClsClassesList === 'function') window.renderClsClassesList();
       }
+    } else if (path.startsWith('report-studio') || path.startsWith('reports')) {
+      if (viewDashboard) viewDashboard.classList.remove('active');
+      if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+      if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+      if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
+      if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+      if (viewClassesApp) viewClassesApp.classList.remove('active');
+      if (viewReportStudioApp) viewReportStudioApp.classList.add('active');
+      if (typeof window.renderReportStudio === 'function') {
+        window.renderReportStudio();
+      }
     } else {
       if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
       if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
       if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
       if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
       if (viewClassesApp) viewClassesApp.classList.remove('active');
+      if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
       if (viewDashboard) viewDashboard.classList.add('active');
       if (typeof window.updateLandingPageHero === 'function') {
         window.updateLandingPageHero();
@@ -308,6 +326,7 @@
     const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
     const viewGlimpseApp = document.getElementById('view-glimpse-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
@@ -315,6 +334,7 @@
     if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
+    if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
     if (viewGlimpseApp) viewGlimpseApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     navigateToRoute('#/glimpse');
@@ -326,6 +346,7 @@
     const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
     const viewAttendanceApp = document.getElementById('view-attendance-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
@@ -333,6 +354,7 @@
     if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
+    if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
     if (viewAttendanceApp) viewAttendanceApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.showAttScreen === 'function') window.showAttScreen('att-screen-programs');
@@ -346,6 +368,7 @@
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
     const viewMarksheetApp = document.getElementById('view-marksheet-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
@@ -353,6 +376,7 @@
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
+    if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
     if (viewMarksheetApp) viewMarksheetApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.showMsScreen === 'function') window.showMsScreen('ms-screen-entries');
@@ -370,6 +394,7 @@
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewClassesApp = document.getElementById('view-classes-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
@@ -377,6 +402,7 @@
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
+    if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.showUgScreen === 'function') window.showUgScreen('ug-screen-groups');
@@ -390,6 +416,7 @@
     const viewAttendanceApp = document.getElementById('view-attendance-app');
     const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
     const viewClassesApp = document.getElementById('view-classes-app');
 
     if (viewDashboard) viewDashboard.classList.remove('active');
@@ -397,11 +424,35 @@
     if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
     if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.showClsScreen === 'function') window.showClsScreen('cls-screen-classes');
     if (typeof window.renderClsClassesList === 'function') window.renderClsClassesList();
     navigateToRoute('#/manage/classes');
+  }
+
+  function openReportStudioApp() {
+    const viewDashboard = document.getElementById('view-dashboard');
+    const viewGlimpseApp = document.getElementById('view-glimpse-app');
+    const viewAttendanceApp = document.getElementById('view-attendance-app');
+    const viewMarksheetApp = document.getElementById('view-marksheet-app');
+    const viewUserGroupsApp = document.getElementById('view-user-groups-app');
+    const viewClassesApp = document.getElementById('view-classes-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
+
+    if (viewDashboard) viewDashboard.classList.remove('active');
+    if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
+    if (viewAttendanceApp) viewAttendanceApp.classList.remove('active');
+    if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
+    if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
+    if (viewClassesApp) viewClassesApp.classList.remove('active');
+    if (viewReportStudioApp) viewReportStudioApp.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window.renderReportStudio === 'function') {
+      window.renderReportStudio();
+    }
+    navigateToRoute('#/report-studio');
   }
 
   function openDashboard() {
@@ -410,6 +461,7 @@
     const viewMarksheetApp = document.getElementById('view-marksheet-app');
     const viewUserGroupsApp = document.getElementById('view-user-groups-app');
     const viewClassesApp = document.getElementById('view-classes-app');
+    const viewReportStudioApp = document.getElementById('view-report-studio-app');
     const viewDashboard = document.getElementById('view-dashboard');
 
     if (viewGlimpseApp) viewGlimpseApp.classList.remove('active');
@@ -417,6 +469,7 @@
     if (viewMarksheetApp) viewMarksheetApp.classList.remove('active');
     if (viewUserGroupsApp) viewUserGroupsApp.classList.remove('active');
     if (viewClassesApp) viewClassesApp.classList.remove('active');
+    if (viewReportStudioApp) viewReportStudioApp.classList.remove('active');
     if (viewDashboard) viewDashboard.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof window.updateLandingPageHero === 'function') {
@@ -431,7 +484,9 @@
     const tileMarksheetApp = document.getElementById('tileMarksheetApp');
     const tileUserGroup = document.getElementById('tileUserGroup');
     const tileClasses = document.getElementById('tileClasses');
+    const tileReportStudio = document.getElementById('tileReportStudio');
     const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+    const rsBackToDashboardBtn = document.getElementById('rsBackToDashboardBtn');
 
     if (tileGlimpseApp) {
       tileGlimpseApp.addEventListener('click', openGlimpseApp);
@@ -448,8 +503,14 @@
     if (tileClasses) {
       tileClasses.addEventListener('click', openClassesApp);
     }
+    if (tileReportStudio) {
+      tileReportStudio.addEventListener('click', openReportStudioApp);
+    }
     if (backToDashboardBtn) {
       backToDashboardBtn.addEventListener('click', openDashboard);
+    }
+    if (rsBackToDashboardBtn) {
+      rsBackToDashboardBtn.addEventListener('click', openDashboard);
     }
 
     // In-app alert for coming-soon tiles
@@ -483,6 +544,7 @@
   window.openManageApp = openManageApp;
   window.openUserGroupsApp = openUserGroupsApp;
   window.openClassesApp = openClassesApp;
+  window.openReportStudioApp = openReportStudioApp;
   window.openDashboard = openDashboard;
   window.setupViewNavigation = setupViewNavigation;
 
