@@ -1306,24 +1306,71 @@
 
             <!-- SECTION 2: CONTENT AREA (TABULAR DATA MODE) -->
             <div id="rsTableModeCard" class="rs-card" style="display: none;">
-              <div class="rs-card-header">
+              <div class="rs-card-header rs-table-section-header">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span class="rs-card-title">2. Tabular Data (Excel / CSV)</span>
-                  <span class="rs-badge">Table</span>
+                  <span class="rs-card-title">2. Tabular Data</span>
+                  <span class="badge">Table</span>
                 </div>
-                <div class="rs-editor-header-actions">
-                  <button type="button" id="rsPasteClipboardTableBtn" class="btn btn-subtle btn-sm" title="Paste data from clipboard">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-                    <span>Paste Clipboard</span>
+                <!-- View Switcher: Interactive Sheet vs Bulk Text -->
+                <div class="rs-subtab-switcher">
+                  <button type="button" id="rsTableViewSheetBtn" class="rs-subtab-btn active" title="Interactive Spreadsheet Editor">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+                    <span>Sheet</span>
                   </button>
-                  <button type="button" id="rsClearTableBtn" class="btn btn-subtle btn-sm" title="Clear table data">Clear</button>
+                  <button type="button" id="rsTableViewRawBtn" class="rs-subtab-btn" title="Bulk Raw Text Editor">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
+                    <span>Bulk Text</span>
+                  </button>
                 </div>
               </div>
 
               <div class="rs-card-body">
-                <div class="form-group">
-                  <label for="rsTableRawInput">Paste Excel / CSV Cells</label>
-                  <textarea id="rsTableRawInput" class="input-control rs-table-textarea" placeholder="Copy rows and columns from Excel or Google Sheets and paste here..."></textarea>
+                <!-- 1. INTERACTIVE SPREADSHEET VIEW -->
+                <div id="rsTableSheetView">
+                  <div class="rs-sheet-toolbar">
+                    <div class="rs-sheet-toolbar-left">
+                      <select id="rsTableTemplateSelect" class="rs-toolbar-select" title="Load starter table template">
+                        <option value="">📋 Starter Templates...</option>
+                        <option value="student_roster">Student Roster (Class, Roll No, Name, Remarks)</option>
+                        <option value="marksheet">Assessment Summary (Roll No, Name, Math, Science, Total)</option>
+                        <option value="schedule">Weekly Timetable (Day, Period, Subject, Room)</option>
+                        <option value="blank_3x4">Blank Table (3 Columns × 4 Rows)</option>
+                      </select>
+                    </div>
+                    <div class="rs-sheet-toolbar-right">
+                      <button type="button" id="rsSheetAddRowBtn" class="btn btn-subtle btn-sm" title="Add a new row at the bottom">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Row</span>
+                      </button>
+                      <button type="button" id="rsSheetAddColBtn" class="btn btn-subtle btn-sm" title="Add a new column at the right">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Column</span>
+                      </button>
+                      <button type="button" id="rsSheetClearBtn" class="btn btn-subtle btn-sm" title="Clear all cells">Clear</button>
+                    </div>
+                  </div>
+
+                  <!-- Spreadsheet Grid Wrapper -->
+                  <div class="rs-sheet-wrapper" id="rsSheetTableWrapper">
+                    <!-- Dynamically rendered interactive sheet -->
+                  </div>
+                </div>
+
+                <!-- 2. BULK RAW TEXT VIEW -->
+                <div id="rsTableRawView" style="display: none;">
+                  <div class="rs-sheet-toolbar" style="margin-bottom: 8px;">
+                    <span style="font-size: var(--text-xs); color: var(--muted); font-weight: 500;">Paste TSV, CSV or lines copied directly from Excel / Sheets</span>
+                    <div class="rs-sheet-toolbar-right">
+                      <button type="button" id="rsPasteClipboardTableBtn" class="btn btn-subtle btn-sm" title="Paste data from clipboard">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                        <span>Paste Clipboard</span>
+                      </button>
+                      <button type="button" id="rsClearTableBtn" class="btn btn-subtle btn-sm" title="Clear table data">Clear</button>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 12px;">
+                    <textarea id="rsTableRawInput" class="input-control rs-table-textarea" placeholder="Copy rows and columns from Excel or Google Sheets and paste here..."></textarea>
+                  </div>
                 </div>
 
                 <!-- Table Format Options -->

@@ -21,6 +21,7 @@
     tablePreserveMerges: true,
     tableMergeScope: 'auto', // 'auto', 'first', 'first2', 'all'
     tableAlign: 'auto', // 'auto', 'left', 'center', 'right'
+    tableEditorMode: 'sheet', // 'sheet' or 'raw'
     includePostNote: true,
     postNote: 'Note: Parents are requested to sign the report book and return it with your child by Wednesday morning.',
     includeFooter: true,
@@ -101,23 +102,26 @@
   // --- EXCEL / CSV / TSV PARSER ---
   function parseTableData(rawText) {
     if (!rawText || !rawText.trim()) return [];
-    const lines = rawText.trim().split(/\r\n|\n|\r/).filter(line => line.trim().length > 0);
+    const lines = rawText.split(/\r\n|\n|\r/);
     if (lines.length === 0) return [];
 
     // Detect delimiter: tab takes highest priority (Excel copy-paste), then comma, then semicolon, then pipe
-    const firstLine = lines[0];
+    const sampleLine = lines.find(line => line.trim().length > 0) || lines[0] || '';
     let delimiter = '\t';
-    if (firstLine.indexOf('\t') !== -1) {
+    if (sampleLine.indexOf('\t') !== -1) {
       delimiter = '\t';
-    } else if (firstLine.indexOf(',') !== -1) {
+    } else if (sampleLine.indexOf(',') !== -1) {
       delimiter = ',';
-    } else if (firstLine.indexOf(';') !== -1) {
+    } else if (sampleLine.indexOf(';') !== -1) {
       delimiter = ';';
-    } else if (firstLine.indexOf('|') !== -1) {
+    } else if (sampleLine.indexOf('|') !== -1) {
       delimiter = '|';
     }
 
-    return lines.map(line => {
+    const filtered = lines.filter(line => line.trim().length > 0 || line.includes(delimiter));
+    if (filtered.length === 0) return [];
+
+    return filtered.map(line => {
       if (delimiter === ',') {
         return parseCsvLine(line);
       }
@@ -163,6 +167,336 @@
       }
     }
     return checkedCount > 0 && numericCount / checkedCount >= 0.75;
+  }
+
+  // --- SPREADSHEET STARTER TEMPLATES ---
+  const TABLE_TEMPLATES = {
+    student_roster: 'CLASS\tROLL NO\tSTUDENT NAME\tREMARKS\n1A\t101\tMaryam Bint Saheer\tExcellent participation\n\t102\tNavanika Vineeth\tConsistent attendance\n\t103\tAyaan Muhammad\tVery good progress\n1B\t104\tMiswana\tCreative and attentive\n\t105\tMuhammed Aslam\tActive learner\n1C\t106\tKhanza\tNeat work and methodical\n\t107\tAlfid\tHigh accuracy in exercises',
+    marksheet: 'ROLL NO\tNAME\tMATHEMATICS\tSCIENCE\tTOTAL\tGRADE\n101\tAarav Patel\t94\t92\t186\tA+\n102\tDiya Sharma\t88\t85\t173\tA\n103\tKabir Verma\t76\t80\t156\tB+\n104\tMeera Nair\t95\t98\t193\tA+\n105\tRohan Gupta\t82\t79\t161\tB+',
+    schedule: 'DAY\tPERIOD 1\tPERIOD 2\tPERIOD 3\tPERIOD 4\nMonday\tMathematics\tEnglish\tPhysics\tPhysical Ed.\nTuesday\tChemistry\tBiology\tMathematics\tArt & Craft\nWednesday\tEnglish\tComputer Sci.\tPhysics\tLibrary\nThursday\tMathematics\tSocial Studies\tChemistry\tMusic\nFriday\tLanguage\tPhysics\tMathematics\tGames',
+    blank_3x4: 'Column 1\tColumn 2\tColumn 3\n\t\t\n\t\t\n\t\t'
+  };
+
+  // --- INTERACTIVE SPREADSHEET HELPERS & BUILDER ---
+  function getGridDataFromRaw(rawText) {
+    const parsed = parseTableData(rawText);
+    if (!parsed || parsed.length === 0) {
+      return [
+        ['Column 1', 'Column 2', 'Column 3'],
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', '']
+      ];
+    }
+    let maxCols = 0;
+    parsed.forEach(row => {
+      if (row.length > maxCols) maxCols = row.length;
+    });
+    if (maxCols === 0) maxCols = 1;
+
+    return parsed.map((row, rIdx) => {
+      const newRow = row.slice();
+      while (newRow.length < maxCols) {
+        newRow.push(rIdx === 0 ? `Col ${newRow.length + 1}` : '');
+      }
+      return newRow;
+    });
+  }
+
+  function serializeGridData(grid) {
+    if (!grid || grid.length === 0) return '';
+    return grid.map(row => row.join('\t')).join('\n');
+  }
+
+  function renderInteractiveSheet() {
+    const wrapper = document.getElementById('rsSheetTableWrapper');
+    if (!wrapper) return;
+
+    const grid = getGridDataFromRaw(rsState.tableRaw);
+    const numRows = grid.length;
+    const numCols = grid[0].length;
+
+    wrapper.innerHTML = '';
+    const table = document.createElement('table');
+    table.className = 'rs-sheet-table';
+
+    // 1. thead: Column headers
+    const thead = document.createElement('thead');
+    const headerTr = document.createElement('tr');
+
+    // Corner cell
+    const cornerTh = document.createElement('th');
+    cornerTh.className = 'rs-sheet-corner-th';
+    cornerTh.innerHTML = '<span style="font-size: 10px; color: var(--muted, #91918c);">#</span>';
+    headerTr.appendChild(cornerTh);
+
+    // Column headers
+    for (let c = 0; c < numCols; c++) {
+      const th = document.createElement('th');
+      th.className = 'rs-sheet-th';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'rs-sheet-th-wrap';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'rs-sheet-header-input';
+      input.value = grid[0][c] || `Col ${c + 1}`;
+      input.placeholder = `Col ${c + 1}`;
+      input.dataset.col = c;
+      input.dataset.row = 0;
+
+      input.addEventListener('input', (e) => {
+        grid[0][c] = e.target.value;
+        rsState.tableRaw = serializeGridData(grid);
+        const rawInput = document.getElementById('rsTableRawInput');
+        if (rawInput) rawInput.value = rsState.tableRaw;
+        updateReportPreview();
+        saveReportStudioDraftDebounced();
+      });
+
+      input.addEventListener('keydown', (e) => handleSheetKeyNav(e, 0, c, numRows, numCols));
+
+      wrap.appendChild(input);
+
+      if (numCols > 1) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'rs-sheet-col-del-btn';
+        delBtn.title = 'Delete column';
+        delBtn.innerHTML = '&times;';
+        delBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          deleteSheetColumn(c);
+        });
+        wrap.appendChild(delBtn);
+      }
+
+      th.appendChild(wrap);
+      headerTr.appendChild(th);
+    }
+
+    thead.appendChild(headerTr);
+    table.appendChild(thead);
+
+    // 2. tbody: Data rows
+    const tbody = document.createElement('tbody');
+    const startRow = 1;
+
+    for (let r = startRow; r < numRows; r++) {
+      const tr = document.createElement('tr');
+
+      // Gutter cell (row number & delete button)
+      const gutterTd = document.createElement('td');
+      gutterTd.className = 'rs-sheet-row-gutter';
+
+      const gutterWrap = document.createElement('div');
+      gutterWrap.className = 'rs-sheet-row-gutter-wrap';
+
+      const rowNum = document.createElement('span');
+      rowNum.className = 'rs-sheet-row-num';
+      rowNum.textContent = String(r);
+      gutterWrap.appendChild(rowNum);
+
+      const delRowBtn = document.createElement('button');
+      delRowBtn.type = 'button';
+      delRowBtn.className = 'rs-sheet-row-del-btn';
+      delRowBtn.title = `Delete row ${r}`;
+      delRowBtn.innerHTML = '&times;';
+      delRowBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        deleteSheetRow(r);
+      });
+      gutterWrap.appendChild(delRowBtn);
+
+      gutterTd.appendChild(gutterWrap);
+      tr.appendChild(gutterTd);
+
+      // Data cells
+      for (let c = 0; c < numCols; c++) {
+        const td = document.createElement('td');
+        td.className = 'rs-sheet-td';
+
+        const cellInput = document.createElement('input');
+        cellInput.type = 'text';
+        cellInput.className = 'rs-sheet-cell-input';
+        cellInput.value = grid[r][c] || '';
+        cellInput.placeholder = '(empty)';
+        cellInput.dataset.row = r;
+        cellInput.dataset.col = c;
+
+        cellInput.addEventListener('input', (e) => {
+          grid[r][c] = e.target.value;
+          rsState.tableRaw = serializeGridData(grid);
+          const rawInput = document.getElementById('rsTableRawInput');
+          if (rawInput) rawInput.value = rsState.tableRaw;
+          updateReportPreview();
+          saveReportStudioDraftDebounced();
+        });
+
+        cellInput.addEventListener('keydown', (e) => handleSheetKeyNav(e, r, c, numRows, numCols));
+
+        td.appendChild(cellInput);
+        tr.appendChild(td);
+      }
+
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    wrapper.appendChild(table);
+  }
+
+  function handleSheetKeyNav(e, r, c, numRows, numCols) {
+    if (e.key === 'Tab') {
+      if (!e.shiftKey && r === numRows - 1 && c === numCols - 1) {
+        e.preventDefault();
+        addSheetRow(true);
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (r === numRows - 1) {
+        addSheetRow(false, c);
+      } else {
+        const nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"][data-col="${c}"]`);
+        if (nextInput) nextInput.focus();
+      }
+    } else if (e.key === 'ArrowDown') {
+      const nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"][data-col="${c}"]`);
+      if (nextInput) nextInput.focus();
+    } else if (e.key === 'ArrowUp' && r > 0) {
+      const prevInput = document.querySelector(`.rs-sheet-table input[data-row="${r - 1}"][data-col="${c}"]`);
+      if (prevInput) prevInput.focus();
+    }
+  }
+
+  function addSheetRow(focusFirst = true, focusCol = 0) {
+    const grid = getGridDataFromRaw(rsState.tableRaw);
+    const numCols = grid[0].length;
+    const newRow = new Array(numCols).fill('');
+    grid.push(newRow);
+    rsState.tableRaw = serializeGridData(grid);
+    const rawInput = document.getElementById('rsTableRawInput');
+    if (rawInput) rawInput.value = rsState.tableRaw;
+    renderInteractiveSheet();
+    updateReportPreview();
+    saveReportStudioDraftDebounced();
+
+    setTimeout(() => {
+      const targetCol = focusFirst ? 0 : focusCol;
+      const newRowIdx = grid.length - 1;
+      const target = document.querySelector(`.rs-sheet-table input[data-row="${newRowIdx}"][data-col="${targetCol}"]`);
+      if (target) target.focus();
+    }, 10);
+  }
+
+  function addSheetColumn() {
+    const grid = getGridDataFromRaw(rsState.tableRaw);
+    const newColIdx = grid[0].length;
+    grid[0].push(`Col ${newColIdx + 1}`);
+    for (let r = 1; r < grid.length; r++) {
+      grid[r].push('');
+    }
+    rsState.tableRaw = serializeGridData(grid);
+    const rawInput = document.getElementById('rsTableRawInput');
+    if (rawInput) rawInput.value = rsState.tableRaw;
+    renderInteractiveSheet();
+    updateReportPreview();
+    saveReportStudioDraftDebounced();
+
+    setTimeout(() => {
+      const headerInput = document.querySelector(`.rs-sheet-table input[data-row="0"][data-col="${newColIdx}"]`);
+      if (headerInput) {
+        headerInput.focus();
+        headerInput.select();
+      }
+    }, 10);
+  }
+
+  function deleteSheetRow(rowIndex) {
+    const grid = getGridDataFromRaw(rsState.tableRaw);
+    if (grid.length <= 2) {
+      grid[1] = new Array(grid[0].length).fill('');
+    } else {
+      grid.splice(rowIndex, 1);
+    }
+    rsState.tableRaw = serializeGridData(grid);
+    const rawInput = document.getElementById('rsTableRawInput');
+    if (rawInput) rawInput.value = rsState.tableRaw;
+    renderInteractiveSheet();
+    updateReportPreview();
+    saveReportStudioDraftDebounced();
+  }
+
+  function deleteSheetColumn(colIndex) {
+    const grid = getGridDataFromRaw(rsState.tableRaw);
+    if (grid[0].length <= 1) return;
+    for (let r = 0; r < grid.length; r++) {
+      grid[r].splice(colIndex, 1);
+    }
+    rsState.tableRaw = serializeGridData(grid);
+    const rawInput = document.getElementById('rsTableRawInput');
+    if (rawInput) rawInput.value = rsState.tableRaw;
+    renderInteractiveSheet();
+    updateReportPreview();
+    saveReportStudioDraftDebounced();
+  }
+
+  function clearSheetData() {
+    const grid = [
+      ['Column 1', 'Column 2', 'Column 3'],
+      ['', '', ''],
+      ['', '', ''],
+      ['', '', '']
+    ];
+    rsState.tableRaw = serializeGridData(grid);
+    const rawInput = document.getElementById('rsTableRawInput');
+    if (rawInput) rawInput.value = rsState.tableRaw;
+    renderInteractiveSheet();
+    updateReportPreview();
+    saveReportStudioDraftDebounced();
+    if (typeof window.showToast === 'function') {
+      window.showToast('Table reset to blank template! 🧹');
+    }
+  }
+
+  function applyTableTemplate(templateKey) {
+    if (!templateKey || !TABLE_TEMPLATES[templateKey]) return;
+    rsState.tableRaw = TABLE_TEMPLATES[templateKey];
+    const rawInput = document.getElementById('rsTableRawInput');
+    if (rawInput) rawInput.value = rsState.tableRaw;
+    renderInteractiveSheet();
+    updateReportPreview();
+    saveReportStudioDraftDebounced();
+    if (typeof window.showToast === 'function') {
+      window.showToast('Starter template loaded into sheet! ✨');
+    }
+  }
+
+  function switchTableEditorView(mode, save = true) {
+    rsState.tableEditorMode = mode;
+    const sheetView = document.getElementById('rsTableSheetView');
+    const rawView = document.getElementById('rsTableRawView');
+    const sheetBtn = document.getElementById('rsTableViewSheetBtn');
+    const rawBtn = document.getElementById('rsTableViewRawBtn');
+
+    if (mode === 'sheet') {
+      if (sheetView) sheetView.style.display = 'block';
+      if (rawView) rawView.style.display = 'none';
+      if (sheetBtn) sheetBtn.classList.add('active');
+      if (rawBtn) rawBtn.classList.remove('active');
+      renderInteractiveSheet();
+    } else {
+      if (sheetView) sheetView.style.display = 'none';
+      if (rawView) rawView.style.display = 'block';
+      if (sheetBtn) sheetBtn.classList.remove('active');
+      if (rawBtn) rawBtn.classList.add('active');
+      const rawInput = document.getElementById('rsTableRawInput');
+      if (rawInput) rawInput.value = rsState.tableRaw || '';
+    }
+    if (save) {
+      saveReportStudioDraftDebounced();
+    }
   }
 
   // --- TABLE CELL MERGE MATRIX BUILDER ---
@@ -623,6 +957,9 @@
 
     // Tab switcher active state
     setWorkspaceMode(rsState.mode, false);
+
+    // Table editor mode (sheet vs raw)
+    switchTableEditorView(rsState.tableEditorMode || 'sheet', false);
   }
 
   // --- WORKSPACE MODE SWITCHER ---
@@ -1672,6 +2009,43 @@
       });
     }
 
+    // Table View switcher buttons (Sheet vs Raw)
+    const tableViewSheetBtn = document.getElementById('rsTableViewSheetBtn');
+    const tableViewRawBtn = document.getElementById('rsTableViewRawBtn');
+    if (tableViewSheetBtn) {
+      tableViewSheetBtn.addEventListener('click', () => switchTableEditorView('sheet'));
+    }
+    if (tableViewRawBtn) {
+      tableViewRawBtn.addEventListener('click', () => switchTableEditorView('raw'));
+    }
+
+    // Interactive Sheet toolbar buttons
+    const sheetAddRowBtn = document.getElementById('rsSheetAddRowBtn');
+    if (sheetAddRowBtn) {
+      sheetAddRowBtn.addEventListener('click', () => addSheetRow());
+    }
+
+    const sheetAddColBtn = document.getElementById('rsSheetAddColBtn');
+    if (sheetAddColBtn) {
+      sheetAddColBtn.addEventListener('click', () => addSheetColumn());
+    }
+
+    const sheetClearBtn = document.getElementById('rsSheetClearBtn');
+    if (sheetClearBtn) {
+      sheetClearBtn.addEventListener('click', () => clearSheetData());
+    }
+
+    const tableTemplateSelect = document.getElementById('rsTableTemplateSelect');
+    if (tableTemplateSelect) {
+      tableTemplateSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val) {
+          applyTableTemplate(val);
+          tableTemplateSelect.value = '';
+        }
+      });
+    }
+
     const pasteClipboardTableBtn = document.getElementById('rsPasteClipboardTableBtn');
     if (pasteClipboardTableBtn) {
       pasteClipboardTableBtn.addEventListener('click', () => {
@@ -1680,6 +2054,9 @@
             if (text && text.trim()) {
               rsState.tableRaw = text;
               if (tableRawInput) tableRawInput.value = text;
+              if (rsState.tableEditorMode === 'sheet') {
+                renderInteractiveSheet();
+              }
               updateReportPreview();
               saveReportStudioDraftDebounced();
               if (typeof window.showToast === 'function') {
@@ -1708,6 +2085,9 @@
       clearTableBtn.addEventListener('click', () => {
         rsState.tableRaw = '';
         if (tableRawInput) tableRawInput.value = '';
+        if (rsState.tableEditorMode === 'sheet') {
+          renderInteractiveSheet();
+        }
         updateReportPreview();
         saveReportStudioDraftDebounced();
       });
