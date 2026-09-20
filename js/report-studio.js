@@ -1360,10 +1360,18 @@
           totalHeight += postNoteBoxHeight + 16;
         }
 
-        // Footer
+        // Footer measurement
+        let footerBoxHeight = 0;
+        let footerLeftLines = [];
+        let footerRightLines = [];
+        const footerLineHeight = 18;
         if (rsState.includeFooter && (rsState.footerLeft || rsState.footerRight)) {
+          footerLeftLines = rsState.footerLeft ? rsState.footerLeft.split('\n') : [];
+          footerRightLines = rsState.footerRight ? rsState.footerRight.split('\n') : [];
+          const maxFooterLines = Math.max(footerLeftLines.length, footerRightLines.length, 1);
+          footerBoxHeight = maxFooterLines * footerLineHeight;
           totalHeight += 18; // divider
-          totalHeight += 24; // footer line
+          totalHeight += footerBoxHeight;
         }
 
         totalHeight += paddingY; // bottom padding
@@ -1709,7 +1717,7 @@
         // Footer Block
         if (rsState.includeFooter && (rsState.footerLeft || rsState.footerRight)) {
           // Pin footer to bottom if aspect ratio has surplus vertical height
-          const pinnedDividerY = finalHeight - paddingY - 24 - 16;
+          const pinnedDividerY = finalHeight - paddingY - footerBoxHeight - 16;
           if (curY < pinnedDividerY) {
             curY = pinnedDividerY;
           }
@@ -1722,19 +1730,23 @@
           ctx.stroke();
           curY += 16;
 
-          ctx.textBaseline = 'middle';
-          ctx.font = `500 12.5px ${fontFamily}`;
-          if (rsState.footerLeft) {
+          ctx.textBaseline = 'top';
+          if (footerLeftLines.length > 0) {
             ctx.fillStyle = '#62625b';
+            ctx.font = `500 12.5px ${fontFamily}`;
             ctx.textAlign = 'left';
-            ctx.fillText(rsState.footerLeft, paddingX, curY);
+            footerLeftLines.forEach((line, idx) => {
+              ctx.fillText(line, paddingX, curY + (idx * footerLineHeight));
+            });
           }
 
-          if (rsState.footerRight) {
+          if (footerRightLines.length > 0) {
             ctx.fillStyle = '#211922';
             ctx.font = `600 12.5px ${fontFamily}`;
             ctx.textAlign = 'right';
-            ctx.fillText(rsState.footerRight, finalWidth - paddingX, curY);
+            footerRightLines.forEach((line, idx) => {
+              ctx.fillText(line, finalWidth - paddingX, curY + (idx * footerLineHeight));
+            });
             ctx.textAlign = 'left';
           }
         }
