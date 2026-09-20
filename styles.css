@@ -4765,6 +4765,11 @@ input:checked + .slider:before {
   }
 }
 
+.rs-report-card.width-auto {
+  width: 100%;
+  max-width: 720px;
+}
+
 .rs-report-card.width-standard {
   width: 100%;
   max-width: 720px;

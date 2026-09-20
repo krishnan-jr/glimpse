@@ -28,7 +28,7 @@
     footerLeft: 'Glimpse Report Studio • Academic Year 2026–27',
     footerRight: 'Class Teacher Signature: __________________',
     cardAccent: '#e60023', // Default Pinterest Red
-    cardWidth: 'standard', // 'standard', 'compact', 'wide'
+    cardWidth: 'auto', // 'auto', 'standard', 'compact', 'wide'
     aspectRatio: 'auto', // 'auto', '1:1', '4:5', '9:16', '16:9', '2:3', '3:4', '3:2', 'custom'
     customRatioW: 1,
     customRatioH: 1,
@@ -762,29 +762,57 @@
     const card = document.getElementById('rsReportCard');
     if (!card) return;
 
-    // Dynamic width expansion if tabular data exceeds standard base width
-    const baseCardWidth = rsState.cardWidth === 'compact' ? 540 : (rsState.cardWidth === 'wide' ? 920 : 720);
-    const baseContentW = baseCardWidth - 64;
-    if (rsState.mode === 'table') {
-      const measureCanvas = document.createElement('canvas');
-      const mCtx = measureCanvas.getContext('2d');
-      const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Plus Jakarta Sans", Helvetica, Arial, sans-serif';
-      const layout = computeTableLayout(mCtx, fontFamily);
-      if (layout.hasData && layout.sumNaturalW > baseContentW) {
-        const expandedW = layout.sumNaturalW + 64;
-        card.style.maxWidth = `${expandedW}px`;
-        if (window.innerWidth > 680) {
-          card.style.width = `${expandedW}px`;
+    // Dynamic width calculation for Auto or Preset widths
+    const paddingX = 36;
+    const paddingTotal = paddingX * 2; // 72px total horizontal padding
+
+    if (rsState.cardWidth === 'auto') {
+      if (rsState.mode === 'table') {
+        const measureCanvas = document.createElement('canvas');
+        const mCtx = measureCanvas.getContext('2d');
+        const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Plus Jakarta Sans", Helvetica, Arial, sans-serif';
+        const layout = computeTableLayout(mCtx, fontFamily);
+        if (layout.hasData) {
+          // Approach 2: Pure Natural Fit with inner content padding and sensible minimum (480px)
+          const autoCardWidth = Math.max(480, layout.sumNaturalW + paddingTotal);
+          card.style.maxWidth = `${autoCardWidth}px`;
+          if (window.innerWidth > 680) {
+            card.style.width = `${autoCardWidth}px`;
+          } else {
+            card.style.width = '100%';
+          }
         } else {
-          card.style.width = '100%';
+          card.style.maxWidth = '720px';
+          card.style.width = '';
+        }
+      } else {
+        card.style.maxWidth = '720px';
+        card.style.width = '';
+      }
+    } else {
+      const baseCardWidth = rsState.cardWidth === 'compact' ? 540 : (rsState.cardWidth === 'wide' ? 920 : 720);
+      const baseContentW = baseCardWidth - paddingTotal;
+      if (rsState.mode === 'table') {
+        const measureCanvas = document.createElement('canvas');
+        const mCtx = measureCanvas.getContext('2d');
+        const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Plus Jakarta Sans", Helvetica, Arial, sans-serif';
+        const layout = computeTableLayout(mCtx, fontFamily);
+        if (layout.hasData && layout.sumNaturalW > baseContentW) {
+          const expandedW = layout.sumNaturalW + paddingTotal;
+          card.style.maxWidth = `${expandedW}px`;
+          if (window.innerWidth > 680) {
+            card.style.width = `${expandedW}px`;
+          } else {
+            card.style.width = '100%';
+          }
+        } else {
+          card.style.maxWidth = '';
+          card.style.width = '';
         }
       } else {
         card.style.maxWidth = '';
         card.style.width = '';
       }
-    } else {
-      card.style.maxWidth = '';
-      card.style.width = '';
     }
 
     // 1. Accent color & width
@@ -931,7 +959,7 @@
       tableMergeScopeGroup.style.display = rsState.tablePreserveMerges ? 'inline-flex' : 'none';
     }
     if (tableAlignSelect) tableAlignSelect.value = rsState.tableAlign || 'auto';
-    if (cardWidthSelect) cardWidthSelect.value = rsState.cardWidth || 'standard';
+    if (cardWidthSelect) cardWidthSelect.value = rsState.cardWidth || 'auto';
     if (aspectRatioSelect) aspectRatioSelect.value = rsState.aspectRatio || 'auto';
     if (customRatioContainer) {
       customRatioContainer.style.display = rsState.aspectRatio === 'custom' ? 'block' : 'none';
@@ -1143,12 +1171,12 @@
   function renderReportCardToCanvas() {
     return new Promise((resolve, reject) => {
       try {
+        const paddingX = 36;
+        const paddingY = 32;
         let targetWidth = 720;
         if (rsState.cardWidth === 'compact') targetWidth = 540;
         if (rsState.cardWidth === 'wide') targetWidth = 920;
 
-        const paddingX = 32;
-        const paddingY = 32;
         let contentWidth = targetWidth - (paddingX * 2);
         const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Plus Jakarta Sans", Helvetica, Arial, sans-serif';
 
@@ -1162,7 +1190,21 @@
         if (rsState.mode === 'table') {
           tableLayout = computeTableLayout(mCtx, fontFamily);
           if (tableLayout.hasData) {
-            if (tableLayout.sumNaturalW > contentWidth) {
+            if (rsState.cardWidth === 'auto') {
+              // Approach 2: Pure Natural Fit with inner content padding and sensible minimum (480px)
+              const minContentW = 480 - (paddingX * 2);
+              const naturalW = tableLayout.sumNaturalW;
+              contentWidth = Math.max(minContentW, naturalW);
+              targetWidth = contentWidth + (paddingX * 2);
+              if (contentWidth > naturalW) {
+                const extra = contentWidth - naturalW;
+                tableColWidths = tableLayout.naturalColWidths.map(w => w + Math.floor(extra * (w / naturalW)));
+                const curSum = tableColWidths.reduce((a, b) => a + b, 0);
+                if (tableColWidths.length > 0) tableColWidths[tableColWidths.length - 1] += (contentWidth - curSum);
+              } else {
+                tableColWidths = tableLayout.naturalColWidths.slice();
+              }
+            } else if (tableLayout.sumNaturalW > contentWidth) {
               // Expand card width dynamically to accommodate table columns with natural spacing
               contentWidth = tableLayout.sumNaturalW;
               targetWidth = contentWidth + (paddingX * 2);
