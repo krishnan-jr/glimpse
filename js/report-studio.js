@@ -22,6 +22,8 @@
     tableMergeScope: 'auto', // 'auto', 'first', 'first2', 'all'
     tableAlign: 'auto', // 'auto', 'left', 'center', 'right'
     tableEditorMode: 'sheet', // 'sheet' or 'raw'
+    tableSectionStyle: 'banner', // 'banner' or 'split'
+    tableSplitPageBreak: false, // In PDF print, start each broken table on a new page
     includePostNote: true,
     postNote: 'Note: Parents are requested to sign the report book and return it with your child by Wednesday morning.',
     includeFooter: true,
@@ -32,7 +34,10 @@
     aspectRatio: 'auto', // 'auto', '1:1', '4:5', '9:16', '16:9', '2:3', '3:4', '3:2', 'custom'
     customRatioW: 1,
     customRatioH: 1,
-    previewZoom: 1
+    previewZoom: 1,
+    pdfPageFormat: 'a4', // 'a4' or 'fit'
+    pdfLayout: 'document', // 'document' (Formal Document) or 'card' (Card Preview)
+    pdfOrientation: 'auto' // 'auto', 'portrait', 'landscape'
   };
 
   let rsState = Object.assign({}, DEFAULT_STATE);
@@ -171,11 +176,27 @@
 
   // --- SPREADSHEET STARTER TEMPLATES ---
   const TABLE_TEMPLATES = {
-    student_roster: 'CLASS\tROLL NO\tSTUDENT NAME\tREMARKS\n1A\t101\tMaryam Bint Saheer\tExcellent participation\n\t102\tNavanika Vineeth\tConsistent attendance\n\t103\tAyaan Muhammad\tVery good progress\n1B\t104\tMiswana\tCreative and attentive\n\t105\tMuhammed Aslam\tActive learner\n1C\t106\tKhanza\tNeat work and methodical\n\t107\tAlfid\tHigh accuracy in exercises',
+    student_roster: 'CLASS\tROLL NO\tSTUDENT NAME\tREMARKS\n# English Recitation\n1A\t101\tMaryam Bint Saheer\tExcellent participation\n\t102\tNavanika Vineeth\tConsistent attendance\n\t103\tAyaan Muhammad\tVery good progress\n# Malayalam Recitation\n1B\t104\tMiswana\tCreative and attentive\n\t105\tMuhammed Aslam\tActive learner\n1C\t106\tKhanza\tNeat work and methodical\n\t107\tAlfid\tHigh accuracy in exercises',
     marksheet: 'ROLL NO\tNAME\tMATHEMATICS\tSCIENCE\tTOTAL\tGRADE\n101\tAarav Patel\t94\t92\t186\tA+\n102\tDiya Sharma\t88\t85\t173\tA\n103\tKabir Verma\t76\t80\t156\tB+\n104\tMeera Nair\t95\t98\t193\tA+\n105\tRohan Gupta\t82\t79\t161\tB+',
     schedule: 'DAY\tPERIOD 1\tPERIOD 2\tPERIOD 3\tPERIOD 4\nMonday\tMathematics\tEnglish\tPhysics\tPhysical Ed.\nTuesday\tChemistry\tBiology\tMathematics\tArt & Craft\nWednesday\tEnglish\tComputer Sci.\tPhysics\tLibrary\nThursday\tMathematics\tSocial Studies\tChemistry\tMusic\nFriday\tLanguage\tPhysics\tMathematics\tGames',
     blank_3x4: 'Column 1\tColumn 2\tColumn 3\n\t\t\n\t\t\n\t\t'
   };
+
+  // --- SUB-SECTION HELPER FUNCTIONS ---
+  function isSubSectionRow(textOrRow) {
+    if (!textOrRow) return false;
+    const str = Array.isArray(textOrRow) ? (textOrRow[0] || '') : String(textOrRow);
+    const trimmed = str.trim();
+    if (trimmed === '#' || trimmed === '##' || trimmed === '###' || trimmed === '§') return true;
+    return /^(#{1,3}\s+|§\s*)/.test(trimmed);
+  }
+
+  function getSubSectionTitle(textOrRow) {
+    if (!textOrRow) return '';
+    const str = Array.isArray(textOrRow) ? (textOrRow[0] || '') : String(textOrRow);
+    const trimmed = str.trim();
+    return trimmed.replace(/^(#{1,3}\s*|§\s*)/, '').trim();
+  }
 
   // --- INTERACTIVE SPREADSHEET HELPERS & BUILDER ---
   function getGridDataFromRaw(rawText) {
@@ -205,7 +226,12 @@
 
   function serializeGridData(grid) {
     if (!grid || grid.length === 0) return '';
-    return grid.map(row => row.join('\t')).join('\n');
+    return grid.map(row => {
+      if (isSubSectionRow(row)) {
+        return (row[0] || '').trim();
+      }
+      return row.join('\t');
+    }).join('\n');
   }
 
   function renderInteractiveSheet() {
@@ -285,18 +311,33 @@
 
     for (let r = startRow; r < numRows; r++) {
       const tr = document.createElement('tr');
+      const isSection = isSubSectionRow(grid[r]);
 
-      // Gutter cell (row number & delete button)
+      // Gutter cell (sub-section toggle + row number & delete button)
       const gutterTd = document.createElement('td');
       gutterTd.className = 'rs-sheet-row-gutter';
 
       const gutterWrap = document.createElement('div');
       gutterWrap.className = 'rs-sheet-row-gutter-wrap';
 
+      const sectionBtn = document.createElement('button');
+      sectionBtn.type = 'button';
+      sectionBtn.className = `rs-sheet-section-btn ${isSection ? 'active' : ''}`;
+      sectionBtn.title = isSection ? 'Row is a section (Click to revert to regular row)' : 'Convert row to section header';
+      sectionBtn.textContent = '§';
+      sectionBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        toggleSheetRowSection(r);
+      });
+      gutterWrap.appendChild(sectionBtn);
+
+      const rowNumWrap = document.createElement('div');
+      rowNumWrap.className = 'rs-sheet-row-num-wrap';
+
       const rowNum = document.createElement('span');
       rowNum.className = 'rs-sheet-row-num';
       rowNum.textContent = String(r);
-      gutterWrap.appendChild(rowNum);
+      rowNumWrap.appendChild(rowNum);
 
       const delRowBtn = document.createElement('button');
       delRowBtn.type = 'button';
@@ -307,26 +348,40 @@
         ev.stopPropagation();
         deleteSheetRow(r);
       });
-      gutterWrap.appendChild(delRowBtn);
+      rowNumWrap.appendChild(delRowBtn);
 
+      gutterWrap.appendChild(rowNumWrap);
       gutterTd.appendChild(gutterWrap);
       tr.appendChild(gutterTd);
 
-      // Data cells
-      for (let c = 0; c < numCols; c++) {
-        const td = document.createElement('td');
-        td.className = 'rs-sheet-td';
+      if (isSection) {
+        tr.className = 'rs-sheet-row-section';
+        const sectionTd = document.createElement('td');
+        sectionTd.className = 'rs-sheet-section-td';
+        sectionTd.colSpan = numCols;
 
-        const cellInput = document.createElement('input');
-        cellInput.type = 'text';
-        cellInput.className = 'rs-sheet-cell-input';
-        cellInput.value = grid[r][c] || '';
-        cellInput.placeholder = '(empty)';
-        cellInput.dataset.row = r;
-        cellInput.dataset.col = c;
+        const sectionWrap = document.createElement('div');
+        sectionWrap.className = 'rs-sheet-section-wrap';
 
-        cellInput.addEventListener('input', (e) => {
-          grid[r][c] = e.target.value;
+        const tag = document.createElement('span');
+        tag.className = 'rs-sheet-section-tag';
+        tag.title = 'Section row';
+        tag.textContent = '§';
+        sectionWrap.appendChild(tag);
+
+        const sectionInput = document.createElement('input');
+        sectionInput.type = 'text';
+        sectionInput.className = 'rs-sheet-section-input';
+        sectionInput.value = getSubSectionTitle(grid[r]);
+        sectionInput.placeholder = 'Enter section or category title (e.g. 1F, English Recitation)...';
+        sectionInput.dataset.row = r;
+        sectionInput.dataset.col = 0;
+
+        sectionInput.addEventListener('input', (e) => {
+          grid[r][0] = '# ' + e.target.value;
+          for (let c = 1; c < numCols; c++) {
+            grid[r][c] = '';
+          }
           rsState.tableRaw = serializeGridData(grid);
           const rawInput = document.getElementById('rsTableRawInput');
           if (rawInput) rawInput.value = rsState.tableRaw;
@@ -334,10 +389,39 @@
           saveReportStudioDraftDebounced();
         });
 
-        cellInput.addEventListener('keydown', (e) => handleSheetKeyNav(e, r, c, numRows, numCols));
+        sectionInput.addEventListener('keydown', (e) => handleSheetKeyNav(e, r, 0, numRows, numCols));
 
-        td.appendChild(cellInput);
-        tr.appendChild(td);
+        sectionWrap.appendChild(sectionInput);
+        sectionTd.appendChild(sectionWrap);
+        tr.appendChild(sectionTd);
+      } else {
+        // Data cells
+        for (let c = 0; c < numCols; c++) {
+          const td = document.createElement('td');
+          td.className = 'rs-sheet-td';
+
+          const cellInput = document.createElement('input');
+          cellInput.type = 'text';
+          cellInput.className = 'rs-sheet-cell-input';
+          cellInput.value = grid[r][c] || '';
+          cellInput.placeholder = '(empty)';
+          cellInput.dataset.row = r;
+          cellInput.dataset.col = c;
+
+          cellInput.addEventListener('input', (e) => {
+            grid[r][c] = e.target.value;
+            rsState.tableRaw = serializeGridData(grid);
+            const rawInput = document.getElementById('rsTableRawInput');
+            if (rawInput) rawInput.value = rsState.tableRaw;
+            updateReportPreview();
+            saveReportStudioDraftDebounced();
+          });
+
+          cellInput.addEventListener('keydown', (e) => handleSheetKeyNav(e, r, c, numRows, numCols));
+
+          td.appendChild(cellInput);
+          tr.appendChild(td);
+        }
       }
 
       tbody.appendChild(tr);
@@ -345,6 +429,47 @@
 
     table.appendChild(tbody);
     wrapper.appendChild(table);
+  }
+
+  function toggleSheetRowSection(rowIndex) {
+    const grid = getGridDataFromRaw(rsState.tableRaw);
+    if (rowIndex < 1 || rowIndex >= grid.length) return;
+
+    const row = grid[rowIndex];
+    if (isSubSectionRow(row)) {
+      // Revert from section to normal row
+      const title = getSubSectionTitle(row);
+      row[0] = title;
+    } else {
+      // Convert to sub-section row
+      let initialTitle = '';
+      for (let c = 0; c < row.length; c++) {
+        if ((row[c] || '').trim()) {
+          initialTitle = row[c].trim();
+          break;
+        }
+      }
+      if (!initialTitle) initialTitle = '';
+      row[0] = '# ' + initialTitle;
+      for (let c = 1; c < row.length; c++) {
+        row[c] = '';
+      }
+    }
+
+    rsState.tableRaw = serializeGridData(grid);
+    const rawInput = document.getElementById('rsTableRawInput');
+    if (rawInput) rawInput.value = rsState.tableRaw;
+    renderInteractiveSheet();
+    updateReportPreview();
+    saveReportStudioDraftDebounced();
+
+    setTimeout(() => {
+      const targetInput = document.querySelector(`.rs-sheet-table input[data-row="${rowIndex}"][data-col="0"]`);
+      if (targetInput) {
+        targetInput.focus();
+        targetInput.select();
+      }
+    }, 10);
   }
 
   function handleSheetKeyNav(e, r, c, numRows, numCols) {
@@ -358,14 +483,23 @@
       if (r === numRows - 1) {
         addSheetRow(false, c);
       } else {
-        const nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"][data-col="${c}"]`);
+        let nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"][data-col="${c}"]`);
+        if (!nextInput) {
+          nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"]`);
+        }
         if (nextInput) nextInput.focus();
       }
     } else if (e.key === 'ArrowDown') {
-      const nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"][data-col="${c}"]`);
+      let nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"][data-col="${c}"]`);
+      if (!nextInput) {
+        nextInput = document.querySelector(`.rs-sheet-table input[data-row="${r + 1}"]`);
+      }
       if (nextInput) nextInput.focus();
     } else if (e.key === 'ArrowUp' && r > 0) {
-      const prevInput = document.querySelector(`.rs-sheet-table input[data-row="${r - 1}"][data-col="${c}"]`);
+      let prevInput = document.querySelector(`.rs-sheet-table input[data-row="${r - 1}"][data-col="${c}"]`);
+      if (!prevInput) {
+        prevInput = document.querySelector(`.rs-sheet-table input[data-row="${r - 1}"]`);
+      }
       if (prevInput) prevInput.focus();
     }
   }
@@ -505,6 +639,11 @@
     const matrix = [];
     for (let r = 0; r < rows.length; r++) {
       matrix[r] = [];
+      const isSec = isSubSectionRow(rows[r]);
+      const secTitle = isSec ? getSubSectionTitle(rows[r]) : '';
+      matrix[r].isSection = isSec;
+      matrix[r].sectionTitle = secTitle;
+
       for (let c = 0; c < numCols; c++) {
         matrix[r][c] = {
           text: rows[r][c] != null ? rows[r][c] : '',
@@ -559,17 +698,22 @@
       }
     }
 
-    // Identify vertical merge spans for qualified columns
+    // Identify vertical merge spans for qualified columns (sub-sections isolate merges)
     for (let c = 0; c < numCols; c++) {
       if (!shouldMergeCol[c]) continue;
 
       let r = startIdx;
       while (r < rows.length) {
+        if (matrix[r].isSection) {
+          r++;
+          continue;
+        }
+
         matrix[r][c].isGroupCol = true;
         const cellVal = rows[r][c].trim();
         if (cellVal !== '') {
           let span = 1;
-          while (r + span < rows.length && rows[r + span][c].trim() === '') {
+          while (r + span < rows.length && !matrix[r + span].isSection && rows[r + span][c].trim() === '') {
             span++;
           }
           matrix[r][c].rowSpan = span;
@@ -609,6 +753,8 @@
         sumNaturalW: 0,
         headerHeight: 0,
         rowHeight: 0,
+        sectionBannerHeight: 0,
+        splitHeaderHeight: 0,
         totalHeight: 0,
         isNumCols: []
       };
@@ -629,6 +775,8 @@
     const matrix = buildTableMatrix(rows, rsState.tableHasHeader, rsState.tablePreserveMerges, rsState.tableMergeScope);
     const headerHeight = rsState.tableCompact ? 30 : 38;
     const rowHeight = rsState.tableCompact ? 28 : 34;
+    const sectionBannerHeight = rsState.tableCompact ? 32 : 38;
+    const splitHeaderHeight = rsState.tableCompact ? 34 : 38;
     const startIdx = rsState.tableHasHeader ? 1 : 0;
     const paddingH = rsState.tableCompact ? 22 : 30; // 11px or 15px on each side
 
@@ -644,6 +792,9 @@
 
       mCtx.font = `500 ${rsState.tableCompact ? 12.5 : 13}px ${fontFamily}`;
       for (let r = startIdx; r < rows.length; r++) {
+        if (matrix[r] && matrix[r].isSection) {
+          continue; // Skip section rows for column width measurement
+        }
         const text = rows[r][c] != null ? String(rows[r][c]) : '';
         if (text) {
           maxTextW = Math.max(maxTextW, mCtx.measureText(text).width);
@@ -655,9 +806,35 @@
     }
 
     const sumNaturalW = naturalColWidths.reduce((a, b) => a + b, 0);
-    const headerRowCount = rsState.tableHasHeader ? 1 : 0;
-    const bodyRowCount = rows.length - headerRowCount;
-    const totalHeight = (headerRowCount * headerHeight) + (bodyRowCount * rowHeight);
+
+    // Compute totalHeight based on section style
+    let sectionCount = 0;
+    for (let r = startIdx; r < rows.length; r++) {
+      if (matrix[r] && matrix[r].isSection) {
+        sectionCount++;
+      }
+    }
+    const normalRowCount = (rows.length - startIdx) - sectionCount;
+
+    let totalHeight = 0;
+    if (rsState.tableSectionStyle === 'split' && sectionCount > 0) {
+      let headersCount = 0;
+      let hasPreSectionRows = false;
+      for (let r = startIdx; r < rows.length; r++) {
+        if (matrix[r].isSection) break;
+        hasPreSectionRows = true;
+      }
+      if (rsState.tableHasHeader && hasPreSectionRows) headersCount++;
+      if (rsState.tableHasHeader) headersCount += sectionCount;
+
+      totalHeight = (headersCount * headerHeight) +
+                    (sectionCount * (splitHeaderHeight + 14)) +
+                    (normalRowCount * rowHeight);
+    } else {
+      totalHeight = (startIdx * headerHeight) +
+                    (sectionCount * sectionBannerHeight) +
+                    (normalRowCount * rowHeight);
+    }
 
     return {
       hasData: true,
@@ -667,6 +844,8 @@
       isNumCols,
       headerHeight,
       rowHeight,
+      sectionBannerHeight,
+      splitHeaderHeight,
       totalHeight,
       naturalColWidths,
       sumNaturalW
@@ -699,31 +878,29 @@
     const zebraClass = rsState.tableZebra ? 'rs-table-zebra' : '';
     const compactClass = rsState.tableCompact ? 'rs-table-compact' : '';
 
-    let html = `<table class="rs-rendered-table ${zebraClass} ${compactClass}">`;
+    const bodyStartIdx = (rsState.tableHasHeader && rows.length > 0) ? 1 : 0;
+    const headerRow = (rsState.tableHasHeader && rows.length > 0) ? rows[0] : null;
 
-    let bodyStartIdx = 0;
-    if (rsState.tableHasHeader && rows.length > 0) {
-      const headerRow = rows[0];
-      html += '<thead><tr>';
+    function renderHeaderTr() {
+      if (!headerRow) return '';
+      let ths = '<thead><tr>';
       for (let c = 0; c < numCols; c++) {
         const text = headerRow[c] != null ? headerRow[c] : '';
         const isGroupCol = matrix.shouldMergeCol && matrix.shouldMergeCol[c];
         const align = rsState.tableAlign !== 'auto' 
           ? rsState.tableAlign 
           : (isNumCols[c] ? 'right' : (isGroupCol ? 'center' : 'left'));
-        html += `<th style="text-align: ${align};">${escapeXml(text)}</th>`;
+        ths += `<th style="text-align: ${align};">${escapeXml(text)}</th>`;
       }
-      html += '</tr></thead>';
-      bodyStartIdx = 1;
+      ths += '</tr></thead>';
+      return ths;
     }
 
-    html += '<tbody>';
-    for (let r = bodyStartIdx; r < rows.length; r++) {
-      html += '<tr>';
+    function renderRowTr(r) {
+      let trHtml = '<tr>';
       for (let c = 0; c < numCols; c++) {
         const cell = matrix[r][c];
         if (cell.isMergedContinuation) {
-          // Omit <td> for covered rows
           continue;
         }
 
@@ -735,15 +912,83 @@
           : (isNumCols[c] ? 'right' : (isGroupCell ? 'center' : 'left'));
 
         if (isGroupCell) {
-          html += `<td rowspan="${cell.rowSpan}" class="rs-merged-cell" style="text-align: ${align}; vertical-align: middle;">${escapeXml(cell.text)}</td>`;
+          trHtml += `<td rowspan="${cell.rowSpan}" class="rs-merged-cell" style="text-align: ${align}; vertical-align: middle;">${escapeXml(cell.text)}</td>`;
         } else {
-          html += `<td style="text-align: ${align};">${escapeXml(cell.text)}</td>`;
+          trHtml += `<td style="text-align: ${align};">${escapeXml(cell.text)}</td>`;
         }
       }
-      html += '</tr>';
+      trHtml += '</tr>';
+      return trHtml;
     }
-    html += '</tbody></table>';
 
+    // Check if there are any section rows
+    let hasSections = false;
+    for (let r = bodyStartIdx; r < rows.length; r++) {
+      if (matrix[r].isSection) {
+        hasSections = true;
+        break;
+      }
+    }
+
+    if (rsState.tableSectionStyle === 'split' && hasSections) {
+      // Split mode: partition rows into separate sub-tables with repeated column headers!
+      let outHtml = '';
+      let currentSectionTitle = null;
+      let currentRows = [];
+
+      function flushCurrentSection() {
+        if (currentRows.length === 0 && !currentSectionTitle) return;
+        outHtml += `<div class="rs-table-split-wrap">`;
+        if (currentSectionTitle) {
+          outHtml += `<div class="rs-table-split-header">
+            <span class="rs-table-split-bar" style="background-color: ${escapeXml(rsState.cardAccent)};"></span>
+            <h4 class="rs-table-split-title">${escapeXml(currentSectionTitle)}</h4>
+          </div>`;
+        }
+        outHtml += `<table class="rs-rendered-table ${zebraClass} ${compactClass}">`;
+        outHtml += renderHeaderTr();
+        outHtml += '<tbody>';
+        currentRows.forEach(r => {
+          outHtml += renderRowTr(r);
+        });
+        outHtml += '</tbody></table></div>';
+        currentRows = [];
+      }
+
+      for (let r = bodyStartIdx; r < rows.length; r++) {
+        if (matrix[r].isSection) {
+          flushCurrentSection();
+          currentSectionTitle = matrix[r].sectionTitle;
+        } else {
+          currentRows.push(r);
+        }
+      }
+      flushCurrentSection();
+
+      return outHtml;
+    }
+
+    // Banner mode (or single table if no sections):
+    let html = `<table class="rs-rendered-table ${zebraClass} ${compactClass}">`;
+    html += renderHeaderTr();
+    html += '<tbody>';
+
+    for (let r = bodyStartIdx; r < rows.length; r++) {
+      if (matrix[r].isSection) {
+        html += `<tr class="rs-table-section-row">
+          <td colspan="${numCols}">
+            <div class="rs-table-section-banner">
+              <span class="rs-table-section-bar" style="background-color: ${escapeXml(rsState.cardAccent)};"></span>
+              <span class="rs-table-section-title">${escapeXml(matrix[r].sectionTitle)}</span>
+            </div>
+          </td>
+        </tr>`;
+      } else {
+        html += renderRowTr(r);
+      }
+    }
+
+    html += '</tbody></table>';
     return html;
   }
 
@@ -870,6 +1115,9 @@
     }
 
     // 5. Content Area (Notes vs. Table)
+    const isSplitPageBreak = !!(rsState.mode === 'table' && rsState.tableSectionStyle === 'split' && rsState.tableSplitPageBreak);
+    card.classList.toggle('rs-table-split-page-break', isSplitPageBreak);
+
     const contentArea = document.getElementById('rsCardContentArea');
     if (contentArea) {
       if (rsState.mode === 'notes') {
@@ -877,6 +1125,7 @@
       } else {
         contentArea.innerHTML = renderTableToHtml();
       }
+      contentArea.classList.toggle('rs-table-split-page-break', isSplitPageBreak);
     }
 
     // 6. Post-content Note
@@ -956,9 +1205,17 @@
     if (tableMergeToggle) tableMergeToggle.checked = !!rsState.tablePreserveMerges;
     if (tableMergeScopeSelect) tableMergeScopeSelect.value = rsState.tableMergeScope || 'auto';
     if (tableMergeScopeGroup) {
-      tableMergeScopeGroup.style.display = rsState.tablePreserveMerges ? 'inline-flex' : 'none';
+      tableMergeScopeGroup.style.display = rsState.tablePreserveMerges ? 'flex' : 'none';
     }
     if (tableAlignSelect) tableAlignSelect.value = rsState.tableAlign || 'auto';
+    const tableSectionStyleSelect = document.getElementById('rsTableSectionStyleSelect');
+    if (tableSectionStyleSelect) tableSectionStyleSelect.value = rsState.tableSectionStyle || 'banner';
+    const tableSplitPageBreakToggle = document.getElementById('rsTableSplitPageBreakToggle');
+    if (tableSplitPageBreakToggle) tableSplitPageBreakToggle.checked = !!rsState.tableSplitPageBreak;
+    const tableSplitPageBreakGroup = document.getElementById('rsTableSplitPageBreakGroup');
+    if (tableSplitPageBreakGroup) {
+      tableSplitPageBreakGroup.style.display = (rsState.tableSectionStyle === 'split') ? 'flex' : 'none';
+    }
     if (cardWidthSelect) cardWidthSelect.value = rsState.cardWidth || 'auto';
     if (aspectRatioSelect) aspectRatioSelect.value = rsState.aspectRatio || 'auto';
     if (customRatioContainer) {
@@ -966,6 +1223,15 @@
     }
     if (customRatioW) customRatioW.value = rsState.customRatioW || 1;
     if (customRatioH) customRatioH.value = rsState.customRatioH || 1;
+
+    const pdfPageFormatSelect = document.getElementById('rsPdfPageFormatSelect');
+    if (pdfPageFormatSelect) pdfPageFormatSelect.value = rsState.pdfPageFormat || 'a4';
+
+    const pdfLayoutSelect = document.getElementById('rsPdfLayoutSelect');
+    if (pdfLayoutSelect) pdfLayoutSelect.value = rsState.pdfLayout || 'document';
+
+    const pdfOrientationSelect = document.getElementById('rsPdfOrientationSelect');
+    if (pdfOrientationSelect) pdfOrientationSelect.value = rsState.pdfOrientation || 'auto';
 
     if (notesEditor && rsState.notesHtml != null) {
       notesEditor.innerHTML = rsState.notesHtml;
@@ -1496,6 +1762,12 @@
           ctx.fill();
           ctx.stroke();
 
+          // Accent left border
+          ctx.fillStyle = rsState.cardAccent || '#e60023';
+          ctx.beginPath();
+          ctx.roundRect(boxX, curY, 4, preNoteBoxHeight, [10, 0, 0, 10]);
+          ctx.fill();
+
           // Lines
           ctx.fillStyle = '#33332e';
           ctx.font = `500 13px ${fontFamily}`;
@@ -1588,17 +1860,34 @@
             const matrix = tableLayout.matrix;
             const isNumCols = tableLayout.isNumCols;
 
-            let startIdx = 0;
-            if (rsState.tableHasHeader && rows.length > 0) {
+            const headerHeight = tableHeaderHeight;
+            const rowHeight = tableRowHeight;
+            const sectionBannerHeight = tableLayout.sectionBannerHeight || (rsState.tableCompact ? 32 : 38);
+            const splitHeaderHeight = tableLayout.splitHeaderHeight || (rsState.tableCompact ? 34 : 38);
+            const startIdx = rsState.tableHasHeader ? 1 : 0;
+            const totalTableW = tableColWidths.reduce((a, b) => a + b, 0);
+
+            // Calculate column X positions
+            const colXPositions = [paddingX];
+            for (let c = 0; c < numCols; c++) {
+              colXPositions[c + 1] = colXPositions[c] + tableColWidths[c];
+            }
+
+            function drawCanvasHeader(y) {
+              if (!rsState.tableHasHeader || rows.length === 0) return;
               const headerRow = rows[0];
               let cellX = paddingX;
               for (let c = 0; c < numCols; c++) {
                 const w = tableColWidths[c];
                 ctx.fillStyle = '#f6f6f3';
-                ctx.fillRect(cellX, curY, w, tableHeaderHeight);
+                ctx.fillRect(cellX, y, w, headerHeight);
                 ctx.strokeStyle = '#e0e0d9';
                 ctx.lineWidth = 1;
-                ctx.strokeRect(cellX, curY, w, tableHeaderHeight);
+                ctx.strokeRect(cellX, y, w, headerHeight);
+
+                // Accent bottom border on header cell
+                ctx.fillStyle = rsState.cardAccent || '#e60023';
+                ctx.fillRect(cellX, y + headerHeight - 2.5, w, 2.5);
 
                 const isGroupCol = matrix.shouldMergeCol && matrix.shouldMergeCol[c];
                 const align = rsState.tableAlign !== 'auto' ? rsState.tableAlign : (isNumCols[c] ? 'right' : (isGroupCol ? 'center' : 'left'));
@@ -1612,29 +1901,17 @@
                 const availW = w - 24;
                 const measuredW = ctx.measureText(text).width;
                 if (measuredW > availW && availW > 0) {
-                  ctx.fillText(text, textX, curY + tableHeaderHeight / 2, availW);
+                  ctx.fillText(text, textX, y + (headerHeight - 2.5) / 2, availW);
                 } else {
-                  ctx.fillText(text, textX, curY + tableHeaderHeight / 2);
+                  ctx.fillText(text, textX, y + (headerHeight - 2.5) / 2);
                 }
 
                 cellX += w;
               }
-              curY += tableHeaderHeight;
-              startIdx = 1;
             }
 
-            // Calculate column X positions
-            const colXPositions = [paddingX];
-            for (let c = 0; c < numCols; c++) {
-              colXPositions[c + 1] = colXPositions[c] + tableColWidths[c];
-            }
-
-            const bodyStartY = curY;
-
-            for (let r = startIdx; r < rows.length; r++) {
-              const isEven = (r - startIdx) % 2 === 1;
+            function drawCanvasDataRow(r, y, isEven) {
               const defaultRowBg = (rsState.tableZebra && isEven) ? '#fafaf8' : '#ffffff';
-              const rY = bodyStartY + (r - startIdx) * tableRowHeight;
 
               for (let c = 0; c < numCols; c++) {
                 const cell = matrix[r][c];
@@ -1648,18 +1925,15 @@
                 const cellX = colXPositions[c];
                 const w = tableColWidths[c];
                 const span = cell.rowSpan || 1;
-                const cellH = span * tableRowHeight;
+                const cellH = span * rowHeight;
 
-                // Background: group/merged cells stay clean white, normal cells use row zebra
                 ctx.fillStyle = isGroupCell ? '#ffffff' : defaultRowBg;
-                ctx.fillRect(cellX, rY, w, cellH);
+                ctx.fillRect(cellX, y, w, cellH);
 
-                // Border: single unified bounding box around the cell/span
                 ctx.strokeStyle = '#e0e0d9';
                 ctx.lineWidth = 1;
-                ctx.strokeRect(cellX, rY, w, cellH);
+                ctx.strokeRect(cellX, y, w, cellH);
 
-                // Determine text alignment
                 const align = rsState.tableAlign !== 'auto'
                   ? rsState.tableAlign
                   : (isNumCols[c] ? 'right' : (isGroupCell ? 'center' : 'left'));
@@ -1671,7 +1945,7 @@
                   : `500 ${rsState.tableCompact ? 12.5 : 13}px ${fontFamily}`;
                 ctx.textBaseline = 'middle';
                 const textX = align === 'right' ? (cellX + w - 12) : (align === 'center' ? cellX + w / 2 : cellX + 12);
-                const textY = rY + cellH / 2;
+                const textY = y + cellH / 2;
                 ctx.textAlign = align;
 
                 const availW = w - 24;
@@ -1683,7 +1957,126 @@
                 }
               }
             }
-            curY += (rows.length - startIdx) * tableRowHeight + 16;
+
+            // Check if there are any section rows
+            let hasSections = false;
+            for (let r = startIdx; r < rows.length; r++) {
+              if (matrix[r].isSection) {
+                hasSections = true;
+                break;
+              }
+            }
+
+            if (rsState.tableSectionStyle === 'split' && hasSections) {
+              let currentSectionStarted = false;
+              let evenIndex = 0;
+
+              let hasPreSectionRows = false;
+              for (let r = startIdx; r < rows.length; r++) {
+                if (matrix[r].isSection) break;
+                hasPreSectionRows = true;
+              }
+
+              if (rsState.tableHasHeader && hasPreSectionRows) {
+                drawCanvasHeader(curY);
+                curY += headerHeight;
+              }
+
+              for (let r = startIdx; r < rows.length; r++) {
+                if (matrix[r].isSection) {
+                  if (currentSectionStarted || hasPreSectionRows) {
+                    if (!canvas.sectionSplitYs) canvas.sectionSplitYs = [];
+                    canvas.sectionSplitYs.push(curY);
+                    curY += 14;
+                  }
+                  currentSectionStarted = true;
+                  evenIndex = 0;
+
+                  // 1. Draw split section header
+                  ctx.fillStyle = rsState.cardAccent || '#e60023';
+                  ctx.beginPath();
+                  ctx.roundRect(paddingX, curY + 2, 4, 18, 2);
+                  ctx.fill();
+
+                  ctx.fillStyle = '#211922';
+                  ctx.font = `800 ${rsState.tableCompact ? 14 : 15}px ${fontFamily}`;
+                  ctx.textAlign = 'left';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillText(matrix[r].sectionTitle, paddingX + 14, curY + 11);
+
+                  curY += 26;
+
+                  ctx.strokeStyle = '#e0e0d9';
+                  ctx.lineWidth = 1.5;
+                  ctx.beginPath();
+                  ctx.moveTo(paddingX, curY);
+                  ctx.lineTo(paddingX + totalTableW, curY);
+                  ctx.stroke();
+                  curY += 8;
+
+                  // 2. Loop table header for this sub-table
+                  if (rsState.tableHasHeader) {
+                    drawCanvasHeader(curY);
+                    curY += headerHeight;
+                  }
+                } else {
+                  const isEven = (evenIndex % 2 === 1);
+                  drawCanvasDataRow(r, curY, isEven);
+                  curY += rowHeight;
+                  evenIndex++;
+                }
+              }
+            } else {
+              // Banner mode (or regular table)
+              if (rsState.tableHasHeader && rows.length > 0) {
+                drawCanvasHeader(curY);
+                curY += headerHeight;
+              }
+
+              let evenIndex = 0;
+              for (let r = startIdx; r < rows.length; r++) {
+                if (matrix[r].isSection) {
+                  ctx.fillStyle = '#f6f6f3';
+                  ctx.fillRect(paddingX, curY, totalTableW, sectionBannerHeight);
+
+                  ctx.strokeStyle = '#e0e0d9';
+                  ctx.lineWidth = 1.5;
+                  ctx.beginPath();
+                  ctx.moveTo(paddingX, curY);
+                  ctx.lineTo(paddingX + totalTableW, curY);
+                  ctx.moveTo(paddingX, curY + sectionBannerHeight);
+                  ctx.lineTo(paddingX + totalTableW, curY + sectionBannerHeight);
+                  ctx.stroke();
+
+                  // Vertical accent bar
+                  const barW = 4;
+                  const barH = 18;
+                  const barX = paddingX + 12;
+                  const barY = curY + (sectionBannerHeight - barH) / 2;
+                  ctx.fillStyle = rsState.cardAccent || '#e60023';
+                  ctx.beginPath();
+                  ctx.roundRect(barX, barY, barW, barH, 2);
+                  ctx.fill();
+
+                  // Title
+                  ctx.fillStyle = '#211922';
+                  ctx.font = `800 ${rsState.tableCompact ? 13.5 : 14.5}px ${fontFamily}`;
+                  ctx.textAlign = 'left';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillText(matrix[r].sectionTitle, barX + barW + 10, curY + sectionBannerHeight / 2);
+
+                  curY += sectionBannerHeight;
+                  evenIndex = 0;
+                } else {
+                  const isEven = (evenIndex % 2 === 1);
+                  drawCanvasDataRow(r, curY, isEven);
+                  curY += rowHeight;
+                  evenIndex++;
+                }
+              }
+            }
+
+            curY += 16;
           }
         }
 
@@ -1699,6 +2092,12 @@
           ctx.roundRect(boxX, curY, boxW, postNoteBoxHeight, 10);
           ctx.fill();
           ctx.stroke();
+
+          // Accent left border
+          ctx.fillStyle = rsState.cardAccent || '#e60023';
+          ctx.beginPath();
+          ctx.roundRect(boxX, curY, 4, postNoteBoxHeight, [10, 0, 0, 10]);
+          ctx.fill();
 
           // Lines
           ctx.fillStyle = '#33332e';
@@ -1805,6 +2204,894 @@
           window.showAlertDialog('Export Notice', 'Could not generate the image. Please verify your content and try again.');
         }
       });
+  }
+
+  // --- CLIENT-SIDE PURE JAVASCRIPT MULTI-PAGE PDF 1.4 BUILDER ---
+  function createMultiPagePdfBlob(pages, pageSize = 'a4') {
+    const encoder = new TextEncoder();
+    const parts = [];
+    const offsets = [];
+    let pos = 0;
+
+    function pushPart(chunk) {
+      parts.push(chunk);
+      pos += chunk.length;
+    }
+
+    const header = encoder.encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+    pushPart(header);
+
+    const numPages = pages.length;
+    const kidsArray = [];
+    for (let i = 0; i < numPages; i++) {
+      kidsArray.push(`${3 + (i * 3)} 0 R`);
+    }
+
+    offsets[1] = pos;
+    pushPart(encoder.encode("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"));
+
+    offsets[2] = pos;
+    pushPart(encoder.encode(`2 0 obj\n<< /Type /Pages /Kids [${kidsArray.join(' ')}] /Count ${numPages} >>\nendobj\n`));
+
+    for (let i = 0; i < numPages; i++) {
+      const page = pages[i];
+      const pageObjNum = 3 + (i * 3);
+      const imgObjNum = 4 + (i * 3);
+      const contentsObjNum = 5 + (i * 3);
+
+      const isLandscape = page.cssWidth > page.cssHeight;
+      let pageWidth, pageHeight;
+      if (pageSize === 'a4') {
+        pageWidth = isLandscape ? 841.89 : 595.28;
+        pageHeight = isLandscape ? 595.28 : 841.89;
+      } else {
+        pageWidth = Number((page.cssWidth * 0.75).toFixed(2));
+        pageHeight = Number((page.cssHeight * 0.75).toFixed(2));
+      }
+
+      let destW, destH, destX, destY;
+      if (pageSize === 'a4') {
+        const margin = 28.35; // 10mm print margin
+        const availW = pageWidth - (margin * 2);
+        const availH = pageHeight - (margin * 2);
+        const scale = Math.min(availW / (page.cssWidth * 0.75), availH / (page.cssHeight * 0.75), 1);
+        destW = Number(((page.cssWidth * 0.75) * scale).toFixed(2));
+        destH = Number(((page.cssHeight * 0.75) * scale).toFixed(2));
+        destX = Number(((pageWidth - destW) / 2).toFixed(2));
+        destY = Number(((pageHeight - destH) / 2).toFixed(2));
+      } else {
+        destW = pageWidth;
+        destH = pageHeight;
+        destX = 0;
+        destY = 0;
+      }
+
+      const contentStream = `q\n${destW} 0 0 ${destH} ${destX} ${destY} cm\n/Im${i + 1} Do\nQ\n`;
+      const contentBytes = encoder.encode(contentStream);
+
+      offsets[pageObjNum] = pos;
+      pushPart(encoder.encode(`${pageObjNum} 0 obj\n<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 ${pageWidth} ${pageHeight}]\n  /Resources <<\n    /ProcSet [/PDF /ImageC]\n    /XObject << /Im${i + 1} ${imgObjNum} 0 R >>\n  >>\n  /Contents ${contentsObjNum} 0 R\n>>\nendobj\n`));
+
+      offsets[imgObjNum] = pos;
+      pushPart(encoder.encode(`${imgObjNum} 0 obj\n<<\n  /Type /XObject\n  /Subtype /Image\n  /Width ${page.imgWidth}\n  /Height ${page.imgHeight}\n  /ColorSpace /DeviceRGB\n  /BitsPerComponent 8\n  /Filter /DCTDecode\n  /Length ${page.jpegUint8.length}\n>>\nstream\n`));
+      pushPart(page.jpegUint8);
+      pushPart(encoder.encode("\nendstream\nendobj\n"));
+
+      offsets[contentsObjNum] = pos;
+      pushPart(encoder.encode(`${contentsObjNum} 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n${contentStream}endstream\nendobj\n`));
+    }
+
+    const totalObjs = 3 + (numPages * 3);
+    const startXref = pos;
+    let xrefStr = `xref\n0 ${totalObjs}\n0000000000 65535 f \r\n`;
+    for (let i = 1; i < totalObjs; i++) {
+      xrefStr += String(offsets[i]).padStart(10, '0') + " 00000 n \r\n";
+    }
+    xrefStr += `trailer\n<< /Size ${totalObjs} /Root 1 0 R >>\nstartxref\n${startXref}\n%%EOF\n`;
+    pushPart(encoder.encode(xrefStr));
+
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+
+  function createPdfBlobFromJpeg(jpegUint8, imgWidth, imgHeight, cssWidth, cssHeight, pageSize = 'a4') {
+    return createMultiPagePdfBlob([{
+      jpegUint8,
+      imgWidth,
+      imgHeight,
+      cssWidth,
+      cssHeight
+    }], pageSize);
+  }
+
+  function canvasToJpegUint8(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (!blob) return reject(new Error('Canvas image encoding failed'));
+        blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf))).catch(reject);
+      }, 'image/jpeg', 0.95);
+    });
+  }
+
+  function sliceCanvasToA4Pages(canvas) {
+    const pageCanvasHeight = Math.floor(canvas.width * 1.45);
+
+    if (rsState.tableSplitPageBreak && canvas.sectionSplitYs && canvas.sectionSplitYs.length > 0) {
+      const cutPoints = [0, ...canvas.sectionSplitYs, canvas.height];
+      const pages = [];
+      let pChain = Promise.resolve();
+
+      for (let p = 0; p < cutPoints.length - 1; p++) {
+        const srcY = cutPoints[p];
+        const srcH = cutPoints[p + 1] - srcY;
+        if (srcH <= 0) continue;
+
+        pChain = pChain.then(() => {
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = Math.max(pageCanvasHeight, srcH);
+          const sCtx = sliceCanvas.getContext('2d');
+          sCtx.fillStyle = '#ffffff';
+          sCtx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+
+          sCtx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+
+          return canvasToJpegUint8(sliceCanvas).then(uint8 => {
+            pages.push({
+              jpegUint8: uint8,
+              imgWidth: sliceCanvas.width,
+              imgHeight: sliceCanvas.height,
+              cssWidth: sliceCanvas.width / 2,
+              cssHeight: sliceCanvas.height / 2
+            });
+          });
+        });
+      }
+      return pChain.then(() => pages);
+    }
+
+    if (canvas.height <= pageCanvasHeight * 1.05) {
+      return canvasToJpegUint8(canvas).then(uint8 => [{
+        jpegUint8: uint8,
+        imgWidth: canvas.width,
+        imgHeight: canvas.height,
+        cssWidth: canvas.width / 2,
+        cssHeight: canvas.height / 2
+      }]);
+    }
+
+    const numPages = Math.ceil(canvas.height / pageCanvasHeight);
+    const pages = [];
+    let pChain = Promise.resolve();
+
+    for (let p = 0; p < numPages; p++) {
+      const pageIdx = p;
+      pChain = pChain.then(() => {
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = pageCanvasHeight;
+        const sCtx = sliceCanvas.getContext('2d');
+        sCtx.fillStyle = '#ffffff';
+        sCtx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+
+        const srcY = pageIdx * pageCanvasHeight;
+        const srcH = Math.min(pageCanvasHeight, canvas.height - srcY);
+
+        sCtx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+
+        return canvasToJpegUint8(sliceCanvas).then(uint8 => {
+          pages.push({
+            jpegUint8: uint8,
+            imgWidth: sliceCanvas.width,
+            imgHeight: sliceCanvas.height,
+            cssWidth: sliceCanvas.width / 2,
+            cssHeight: sliceCanvas.height / 2
+          });
+        });
+      });
+    }
+
+    return pChain.then(() => pages);
+  }
+
+  function exportReportPdf() {
+    const btn = document.getElementById('rsExportPdfBtn');
+    if (btn) btn.disabled = true;
+    if (typeof window.showToast === 'function') {
+      window.showToast('Generating PDF document... ⏳');
+    }
+
+    return renderReportCardToCanvas()
+      .then(canvas => {
+        if (rsState.pdfLayout === 'card') {
+          return canvasToJpegUint8(canvas).then(uint8 => [{
+            jpegUint8: uint8,
+            imgWidth: canvas.width,
+            imgHeight: canvas.height,
+            cssWidth: canvas.width / 2,
+            cssHeight: canvas.height / 2
+          }]);
+        } else {
+          return sliceCanvasToA4Pages(canvas);
+        }
+      })
+      .then(pages => {
+        const pageSize = rsState.pdfLayout === 'card' ? 'fit' : 'a4';
+        const pdfBlob = createMultiPagePdfBlob(pages, pageSize);
+        if (btn) btn.disabled = false;
+        const filename = getExportFilename('pdf');
+        if (typeof window.downloadBlob === 'function') {
+          window.downloadBlob(pdfBlob, filename);
+        }
+        if (typeof window.showToast === 'function') {
+          window.showToast(`PDF report downloaded (${pages.length} page${pages.length > 1 ? 's' : ''})! 📄`);
+        }
+      })
+      .catch(err => {
+        console.error('PDF export error:', err);
+        if (btn) btn.disabled = false;
+        if (typeof window.showAlertDialog === 'function') {
+          window.showAlertDialog('Export Notice', 'Could not generate the PDF. Please try again.');
+        }
+      });
+  }
+
+  // --- DEDICATED PDF & PRINT DOCUMENT HTML BUILDER ---
+  function buildPdfDocumentHtml() {
+    const title = rsState.title || 'Report';
+    const accent = rsState.cardAccent || '#e60023';
+
+    let isLandscape = false;
+    let numCols = 1;
+    let tableHtml = '';
+
+    if (rsState.mode === 'table') {
+      const rawRows = parseTableData(rsState.tableRaw);
+      if (rawRows.length > 0) {
+        numCols = Math.max(...rawRows.map(r => r.length), 1);
+        const rows = rawRows.map(r => {
+          const copy = r.slice();
+          while (copy.length < numCols) copy.push('');
+          return copy;
+        });
+
+        const isNumCols = [];
+        for (let c = 0; c < numCols; c++) {
+          isNumCols[c] = rsState.tableAlign === 'auto' ? isNumericColumn(rows, c) : (rsState.tableAlign === 'right');
+        }
+
+        const matrix = buildTableMatrix(rows, rsState.tableHasHeader, rsState.tablePreserveMerges, rsState.tableMergeScope);
+        const zebraClass = rsState.tableZebra ? 'zebra' : '';
+        const compactClass = rsState.tableCompact ? 'compact' : '';
+
+        if (rsState.pdfOrientation === 'landscape') {
+          isLandscape = true;
+        } else if (rsState.pdfOrientation === 'portrait') {
+          isLandscape = false;
+        } else {
+          isLandscape = (numCols >= 5);
+        }
+
+        function renderDocHeaderTr() {
+          if (!rsState.tableHasHeader || rows.length === 0) return '';
+          const headerRow = rows[0];
+          let ths = '<thead><tr>';
+          for (let c = 0; c < numCols; c++) {
+            const text = headerRow[c] != null ? headerRow[c] : '';
+            const isGroupCol = matrix.shouldMergeCol && matrix.shouldMergeCol[c];
+            const align = rsState.tableAlign !== 'auto'
+              ? rsState.tableAlign
+              : (isNumCols[c] ? 'right' : (isGroupCol ? 'center' : 'left'));
+            ths += `<th style="text-align: ${align};">${escapeXml(text)}</th>`;
+          }
+          ths += '</tr></thead>';
+          return ths;
+        }
+
+        const bodyStartIdx = (rsState.tableHasHeader && rows.length > 0) ? 1 : 0;
+
+        // Check if there are any section rows
+        let hasSections = false;
+        for (let r = bodyStartIdx; r < rows.length; r++) {
+          if (matrix[r].isSection) {
+            hasSections = true;
+            break;
+          }
+        }
+
+        if (rsState.tableSectionStyle === 'split' && hasSections) {
+          // Split mode: partition rows into separate sub-tables with repeated column headers
+          let currentSectionTitle = null;
+          let currentRows = [];
+          let sectionIndex = 0;
+
+          function flushPdfSection() {
+            if (currentRows.length === 0 && !currentSectionTitle) return;
+            const isPageBreak = rsState.tableSplitPageBreak && sectionIndex > 0;
+            const breakClass = isPageBreak ? ' rs-doc-page-break' : '';
+            const breakInline = isPageBreak ? ' page-break-before: always !important; break-before: page !important; margin-top: 0 !important; padding-top: 0 !important;' : '';
+            tableHtml += `<div class="rs-table-split-wrap${breakClass}" style="page-break-inside: auto; break-inside: auto; margin: ${isPageBreak ? '0' : '16px'} 0 10px 0;${breakInline}">`;
+            if (currentSectionTitle) {
+              tableHtml += `<div class="rs-table-split-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1.5px solid #e0e0d9; page-break-after: avoid; break-after: avoid;">
+                <span class="rs-table-split-bar" style="width: 4px; height: 18px; border-radius: 2px; background-color: ${accent}; display: inline-block;"></span>
+                <h4 class="rs-table-split-title" style="font-size: 15px; font-weight: 800; color: #211922; margin: 0;">${escapeXml(currentSectionTitle)}</h4>
+              </div>`;
+            }
+            tableHtml += `<table class="rs-doc-table ${zebraClass} ${compactClass}">`;
+            tableHtml += renderDocHeaderTr();
+
+            let i = 0;
+            while (i < currentRows.length) {
+              const curR = currentRows[i];
+              let groupSpan = 1;
+              const cell0 = matrix[curR] && matrix[curR][0];
+              if (rsState.tablePreserveMerges && cell0 && cell0.isMergeRoot && cell0.rowSpan > 1) {
+                groupSpan = cell0.rowSpan;
+              }
+
+              const avoidBreakStyle = groupSpan <= 25 ? 'style="page-break-inside: avoid; break-inside: avoid;"' : '';
+              tableHtml += `<tbody class="rs-doc-group" ${avoidBreakStyle}>`;
+
+              for (let gr = 0; gr < groupSpan && (i + gr) < currentRows.length; gr++) {
+                const rIdx = currentRows[i + gr];
+                tableHtml += '<tr>';
+                for (let c = 0; c < numCols; c++) {
+                  const cell = matrix[rIdx][c];
+                  if (cell.isMergedContinuation) {
+                    if (groupSpan > 25 && c === 0) {
+                      const rootCell = matrix[cell.parentRow][0];
+                      tableHtml += `<td class="rs-doc-merged-cell" style="text-align: center; vertical-align: middle; opacity: 0.85;">${escapeXml(rootCell.text)}</td>`;
+                    }
+                    continue;
+                  }
+
+                  const isGroupCol = matrix.shouldMergeCol && matrix.shouldMergeCol[c];
+                  const isGroupCell = cell.isGroupCol || isGroupCol || cell.isMergeRoot || (cell.rowSpan > 1);
+
+                  const align = rsState.tableAlign !== 'auto'
+                    ? rsState.tableAlign
+                    : (isNumCols[c] ? 'right' : (isGroupCell ? 'center' : 'left'));
+
+                  if (isGroupCell) {
+                    const rSpan = (groupSpan > 25 && c === 0) ? 1 : cell.rowSpan;
+                    tableHtml += `<td rowspan="${rSpan}" class="rs-doc-merged-cell" style="text-align: ${align}; vertical-align: middle;">${escapeXml(cell.text)}</td>`;
+                  } else {
+                    tableHtml += `<td style="text-align: ${align};">${escapeXml(cell.text)}</td>`;
+                  }
+                }
+                tableHtml += '</tr>';
+              }
+
+              tableHtml += '</tbody>';
+              i += groupSpan;
+            }
+
+            tableHtml += '</table></div>';
+            currentRows = [];
+            sectionIndex++;
+          }
+
+          for (let r = bodyStartIdx; r < rows.length; r++) {
+            if (matrix[r].isSection) {
+              flushPdfSection();
+              currentSectionTitle = matrix[r].sectionTitle;
+            } else {
+              currentRows.push(r);
+            }
+          }
+          flushPdfSection();
+        } else {
+          // Banner mode (Single table)
+          tableHtml = `<table class="rs-doc-table ${zebraClass} ${compactClass}">`;
+          tableHtml += renderDocHeaderTr();
+
+          let r = bodyStartIdx;
+          while (r < rows.length) {
+            if (matrix[r].isSection) {
+              tableHtml += `<tbody class="rs-doc-group" style="page-break-inside: avoid; break-inside: avoid;">
+                <tr class="rs-table-section-row" style="background-color: #f6f6f3;">
+                  <td colspan="${numCols}" style="padding: 10px 14px; border-top: 1.5px solid #e0e0d9; border-bottom: 1.5px solid #e0e0d9; text-align: left;">
+                    <div class="rs-table-section-banner" style="display: flex; align-items: center; gap: 8px;">
+                      <span class="rs-table-section-bar" style="width: 4px; height: 18px; border-radius: 2px; background-color: ${accent}; display: inline-block;"></span>
+                      <strong class="rs-table-section-title" style="font-size: 14.5px; font-weight: 800; color: #211922;">${escapeXml(matrix[r].sectionTitle)}</strong>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>`;
+              r++;
+              continue;
+            }
+
+            let groupSpan = 1;
+            const cell0 = matrix[r] && matrix[r][0];
+            if (rsState.tablePreserveMerges && cell0 && cell0.isMergeRoot && cell0.rowSpan > 1) {
+              groupSpan = cell0.rowSpan;
+            }
+
+            const avoidBreakStyle = groupSpan <= 25 ? 'style="page-break-inside: avoid; break-inside: avoid;"' : '';
+            tableHtml += `<tbody class="rs-doc-group" ${avoidBreakStyle}>`;
+
+            for (let gr = 0; gr < groupSpan && (r + gr) < rows.length; gr++) {
+              const curR = r + gr;
+              tableHtml += '<tr>';
+              for (let c = 0; c < numCols; c++) {
+                const cell = matrix[curR][c];
+                if (cell.isMergedContinuation) {
+                  if (groupSpan > 25 && c === 0) {
+                    const rootCell = matrix[cell.parentRow][0];
+                    tableHtml += `<td class="rs-doc-merged-cell" style="text-align: center; vertical-align: middle; opacity: 0.85;">${escapeXml(rootCell.text)}</td>`;
+                  }
+                  continue;
+                }
+
+                const isGroupCol = matrix.shouldMergeCol && matrix.shouldMergeCol[c];
+                const isGroupCell = cell.isGroupCol || isGroupCol || cell.isMergeRoot || (cell.rowSpan > 1);
+
+                const align = rsState.tableAlign !== 'auto'
+                  ? rsState.tableAlign
+                  : (isNumCols[c] ? 'right' : (isGroupCell ? 'center' : 'left'));
+
+                if (isGroupCell) {
+                  const rSpan = (groupSpan > 25 && c === 0) ? 1 : cell.rowSpan;
+                  tableHtml += `<td rowspan="${rSpan}" class="rs-doc-merged-cell" style="text-align: ${align}; vertical-align: middle;">${escapeXml(cell.text)}</td>`;
+                } else {
+                  tableHtml += `<td style="text-align: ${align};">${escapeXml(cell.text)}</td>`;
+                }
+              }
+              tableHtml += '</tr>';
+            }
+
+            tableHtml += '</tbody>';
+            r += groupSpan;
+          }
+
+          tableHtml += '</table>';
+        }
+      } else {
+        tableHtml = '<p style="color: #64748b; font-style: italic;">No table data available.</p>';
+      }
+    } else {
+      if (rsState.pdfOrientation === 'landscape') isLandscape = true;
+      else if (rsState.pdfOrientation === 'portrait') isLandscape = false;
+      else isLandscape = false;
+    }
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeXml(title)}</title>
+  <style>
+    @page {
+      size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+      margin: 12mm 15mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Completely eliminate any scrollbar in print & preview */
+    * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    ::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      color: #211922 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Plus Jakarta Sans", Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow: visible !important;
+    }
+
+    body {
+      padding: 6px 10px;
+    }
+
+    .rs-doc-container {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      overflow: visible !important;
+    }
+
+    .rs-doc-topbar {
+      height: 6px;
+      background-color: ${accent};
+      border-radius: 3px;
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .rs-doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1.5px solid #e0e0d9;
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .rs-doc-title-block {
+      flex: 1;
+    }
+
+    .rs-doc-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #211922;
+      line-height: 1.2;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .rs-doc-subtitle {
+      font-size: 14px;
+      font-weight: 500;
+      color: #62625b;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .rs-doc-date-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      background-color: #f6f6f3;
+      border: 1px solid #e0e0d9;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #33332e;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .rs-doc-prenote,
+    .rs-doc-postnote {
+      background-color: #fcfcfb;
+      border: 1px solid #e5e5e0;
+      border-left: 4px solid ${accent};
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      color: #33332e;
+      line-height: 1.55;
+      white-space: pre-line;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .rs-doc-prenote {
+      margin-bottom: 14px;
+    }
+
+    .rs-doc-postnote {
+      margin-top: 14px;
+    }
+
+    .rs-doc-content {
+      width: 100%;
+      overflow: visible !important;
+    }
+
+    /* Full-width document table */
+    .rs-doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 10px 0 16px 0;
+      border: 1px solid #e0e0d9;
+      overflow: visible !important;
+    }
+
+    .rs-doc-table thead {
+      display: table-header-group;
+    }
+
+    .rs-doc-table th {
+      background-color: #f6f6f3 !important;
+      color: #211922 !important;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border: 1px solid #e0e0d9;
+      border-bottom: 2.5px solid ${accent} !important;
+      padding: 9px 12px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .rs-doc-table td {
+      border: 1px solid #e0e0d9;
+      padding: 8px 12px;
+      color: #211922;
+      vertical-align: middle;
+    }
+
+    .rs-doc-table tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .rs-doc-table.zebra tbody tr:nth-child(even) {
+      background-color: #fafaf8 !important;
+    }
+
+    .rs-doc-table td.rs-doc-merged-cell {
+      font-weight: 700;
+      color: #211922;
+      background-color: #ffffff !important;
+      border: 1px solid #e0e0d9 !important;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .rs-doc-table.compact th {
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+    .rs-doc-table.compact td {
+      padding: 5px 10px;
+      font-size: 11.5px;
+    }
+
+    /* Section row and split table in PDF document */
+    .rs-table-section-row td {
+      background-color: #f6f6f3 !important;
+      border-top: 1.5px solid #e0e0d9 !important;
+      border-bottom: 1.5px solid #e0e0d9 !important;
+      padding: 10px 14px !important;
+    }
+
+    .rs-table-section-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rs-table-section-bar,
+    .rs-table-split-bar {
+      width: 4px;
+      height: 18px;
+      border-radius: 2px;
+      display: inline-block;
+      background-color: ${accent};
+      flex-shrink: 0;
+    }
+
+    .rs-table-section-title,
+    .rs-table-split-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #211922;
+      margin: 0;
+    }
+
+    .rs-table-split-wrap {
+      margin: 16px 0 10px 0;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+
+    .rs-doc-page-break {
+      page-break-before: always !important;
+      break-before: page !important;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
+
+    .rs-table-split-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid #e0e0d9;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    /* Notes Mode */
+    .rs-doc-notes {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #211922;
+      overflow: visible !important;
+    }
+    .rs-doc-notes h1 { font-size: 20px; font-weight: 700; margin: 16px 0 8px; color: #211922; break-after: avoid; }
+    .rs-doc-notes h2 { font-size: 17px; font-weight: 700; margin: 14px 0 6px; color: #211922; break-after: avoid; }
+    .rs-doc-notes h3 { font-size: 15px; font-weight: 600; margin: 12px 0 4px; color: #211922; break-after: avoid; }
+    .rs-doc-notes p { margin-bottom: 12px; }
+    .rs-doc-notes ul, .rs-doc-notes ol { margin: 8px 0 12px 24px; }
+    .rs-doc-notes li { margin-bottom: 4px; }
+    .rs-doc-notes li::marker { color: ${accent}; font-weight: 700; }
+    .rs-doc-notes img { max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #e0e0d9; }
+
+    /* Footer Sign-off */
+    .rs-doc-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1.5px solid #e0e0d9;
+      font-size: 12px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .rs-doc-footer-left {
+      flex: 1;
+      white-space: pre-line;
+      line-height: 1.55;
+      color: #62625b;
+    }
+
+    .rs-doc-footer-right {
+      flex: 1;
+      white-space: pre-line;
+      line-height: 1.55;
+      text-align: right;
+      font-weight: 600;
+      color: #211922;
+    }
+  </style>
+</head>
+<body>
+  <div class="rs-doc-container">
+    <div class="rs-doc-topbar"></div>
+    <header class="rs-doc-header">
+      <div class="rs-doc-title-block">
+        <h1 class="rs-doc-title">${escapeXml(title)}</h1>
+        ${rsState.subtitle ? `<div class="rs-doc-subtitle">${escapeXml(rsState.subtitle)}</div>` : ''}
+      </div>
+      ${(rsState.includeDate && rsState.date) ? `<div class="rs-doc-date-badge">📆 ${escapeXml(formatDisplayDate(rsState.date))}</div>` : ''}
+    </header>
+
+    ${(rsState.includePreNote && rsState.preNote && rsState.preNote.trim()) ? `<div class="rs-doc-prenote">${escapeXml(rsState.preNote.trim())}</div>` : ''}
+
+    <main class="rs-doc-content">
+      ${rsState.mode === 'table' ? tableHtml : `<div class="rs-doc-notes">${rsState.notesHtml || '<p>No content entered.</p>'}</div>`}
+    </main>
+
+    ${(rsState.includePostNote && rsState.postNote && rsState.postNote.trim()) ? `<div class="rs-doc-postnote">${escapeXml(rsState.postNote.trim())}</div>` : ''}
+
+    ${(rsState.includeFooter && (rsState.footerLeft || rsState.footerRight)) ? `
+    <footer class="rs-doc-footer">
+      <div class="rs-doc-footer-left">${escapeXml(rsState.footerLeft || '')}</div>
+      <div class="rs-doc-footer-right">${escapeXml(rsState.footerRight || '')}</div>
+    </footer>` : ''}
+  </div>
+</body>
+</html>`;
+  }
+
+  function printReportCard() {
+    if (typeof window.showToast === 'function') {
+      window.showToast('Preparing print preview... 🖨️');
+    }
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    printFrame.style.visibility = 'hidden';
+    document.body.appendChild(printFrame);
+
+    const frameDoc = printFrame.contentWindow.document;
+
+    if (rsState.pdfLayout !== 'card') {
+      // Formal Document Layout (Default)
+      const docHtml = buildPdfDocumentHtml();
+      frameDoc.open();
+      frameDoc.write(docHtml);
+      frameDoc.close();
+    } else {
+      // Card Preview Layout (with all scrollbars strictly removed)
+      const card = document.getElementById('rsReportCard');
+      if (!card) return;
+      const title = rsState.title || 'Report';
+      const cardClone = card.cloneNode(true);
+      cardClone.style.transform = 'none';
+      cardClone.style.margin = '0 auto';
+      cardClone.style.boxShadow = 'none';
+      cardClone.style.aspectRatio = 'auto';
+      cardClone.style.maxHeight = 'none';
+      cardClone.style.height = 'auto';
+
+      const isLandscape = (rsState.pdfOrientation === 'landscape') ||
+        (rsState.pdfOrientation === 'auto' && card.offsetWidth > 820);
+
+      frameDoc.open();
+      frameDoc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${window.escapeHtml ? window.escapeHtml(title) : title}</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    @page {
+      size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+      margin: 10mm;
+    }
+    * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+      box-shadow: none !important;
+    }
+    ::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    body {
+      margin: 0;
+      padding: 10px;
+      background: #fff !important;
+      display: flex;
+      justify-content: center;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      overflow: visible !important;
+    }
+    .rs-report-card {
+      box-shadow: none !important;
+      transform: none !important;
+      margin: 0 auto !important;
+      max-width: 100% !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+    .rs-card-content-area {
+      overflow: visible !important;
+      max-height: none !important;
+    }
+    .rs-table-split-page-break .rs-table-split-wrap:not(:first-child) {
+      page-break-before: always !important;
+      break-before: page !important;
+      margin-top: 0 !important;
+    }
+  </style>
+</head>
+<body>
+  <div style="width: 100%; display: flex; justify-content: center; overflow: visible !important;">
+    ${cardClone.outerHTML}
+  </div>
+</body>
+</html>`);
+      frameDoc.close();
+    }
+
+    printFrame.contentWindow.focus();
+    setTimeout(() => {
+      printFrame.contentWindow.print();
+      setTimeout(() => {
+        if (printFrame.parentNode) {
+          printFrame.parentNode.removeChild(printFrame);
+        }
+      }, 3000);
+    }, 400);
   }
 
   function copyReportImageToClipboard() {
@@ -2039,7 +3326,7 @@
       tableMergeToggle.addEventListener('change', (e) => {
         rsState.tablePreserveMerges = e.target.checked;
         const group = document.getElementById('rsTableMergeScopeGroup');
-        if (group) group.style.display = rsState.tablePreserveMerges ? 'inline-flex' : 'none';
+        if (group) group.style.display = rsState.tablePreserveMerges ? 'flex' : 'none';
         updateReportPreview();
         saveReportStudioDraftDebounced();
       });
@@ -2058,6 +3345,28 @@
     if (tableAlignSelect) {
       tableAlignSelect.addEventListener('change', (e) => {
         rsState.tableAlign = e.target.value;
+        updateReportPreview();
+        saveReportStudioDraftDebounced();
+      });
+    }
+
+    const tableSectionStyleSelect = document.getElementById('rsTableSectionStyleSelect');
+    const tableSplitPageBreakGroup = document.getElementById('rsTableSplitPageBreakGroup');
+    const tableSplitPageBreakToggle = document.getElementById('rsTableSplitPageBreakToggle');
+    if (tableSectionStyleSelect) {
+      tableSectionStyleSelect.addEventListener('change', (e) => {
+        rsState.tableSectionStyle = e.target.value;
+        if (tableSplitPageBreakGroup) {
+          tableSplitPageBreakGroup.style.display = (rsState.tableSectionStyle === 'split') ? 'flex' : 'none';
+        }
+        updateReportPreview();
+        saveReportStudioDraftDebounced();
+      });
+    }
+
+    if (tableSplitPageBreakToggle) {
+      tableSplitPageBreakToggle.addEventListener('change', (e) => {
+        rsState.tableSplitPageBreak = e.target.checked;
         updateReportPreview();
         saveReportStudioDraftDebounced();
       });
@@ -2273,15 +3582,50 @@
       });
     }
 
+    // PDF Settings Selects
+    const pdfPageFormatSelect = document.getElementById('rsPdfPageFormatSelect');
+    if (pdfPageFormatSelect) {
+      pdfPageFormatSelect.addEventListener('change', (e) => {
+        rsState.pdfPageFormat = e.target.value;
+        saveReportStudioDraftDebounced();
+      });
+    }
+
+    const pdfLayoutSelect = document.getElementById('rsPdfLayoutSelect');
+    if (pdfLayoutSelect) {
+      pdfLayoutSelect.addEventListener('change', (e) => {
+        rsState.pdfLayout = e.target.value;
+        saveReportStudioDraftDebounced();
+      });
+    }
+
+    const pdfOrientationSelect = document.getElementById('rsPdfOrientationSelect');
+    if (pdfOrientationSelect) {
+      pdfOrientationSelect.addEventListener('change', (e) => {
+        rsState.pdfOrientation = e.target.value;
+        saveReportStudioDraftDebounced();
+      });
+    }
+
     // Export Buttons
     const exportPngBtn = document.getElementById('rsExportPngBtn');
     if (exportPngBtn) {
       exportPngBtn.addEventListener('click', () => exportReportImage('image/png'));
     }
 
+    const exportPdfBtn = document.getElementById('rsExportPdfBtn');
+    if (exportPdfBtn) {
+      exportPdfBtn.addEventListener('click', exportReportPdf);
+    }
+
     const exportJpgBtn = document.getElementById('rsExportJpgBtn');
     if (exportJpgBtn) {
       exportJpgBtn.addEventListener('click', () => exportReportImage('image/jpeg'));
+    }
+
+    const printPdfBtn = document.getElementById('rsPrintPdfBtn');
+    if (printPdfBtn) {
+      printPdfBtn.addEventListener('click', printReportCard);
     }
 
     const copyImageBtn = document.getElementById('rsCopyImageBtn');
@@ -2349,6 +3693,9 @@
   window.setupReportStudioEventListeners = setupReportStudioEventListeners;
   window.renderReportStudio = renderReportStudio;
   window.exportReportImage = exportReportImage;
+  window.exportReportPdf = exportReportPdf;
+  window.printReportCard = printReportCard;
+  window.buildPdfDocumentHtml = buildPdfDocumentHtml;
   window.renderReportCardToCanvas = renderReportCardToCanvas;
   window.generateCardImageBlob = generateCardImageBlob;
 
